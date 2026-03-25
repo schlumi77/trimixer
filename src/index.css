@@ -1,0 +1,4 @@
+/* Reset or empty index.css to avoid conflicts */
+body {
+  margin: 0;
+}
