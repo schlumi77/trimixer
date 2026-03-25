@@ -243,6 +243,8 @@ input:focus, .select-input:focus {
   font-size: 1.5rem;
   color: #fff;
 }
+
+footer {
   margin-top: 40px;
   text-align: center;
   font-size: 0.8rem;
