@@ -88,7 +88,7 @@ function App() {
 
         <section className="input-card">
           <h2>Cylinder Configuration</h2>
-          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="grid">
             <div>
               <h3>Target Cylinder</h3>
               <div className="input-group">
@@ -184,7 +184,7 @@ function App() {
 
                   <div className="summary-banner">
                     <h3>Supply Summary (50L)</h3>
-                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                    <div className="grid">
                       <div>
                         <p className="subtext">Remaining Helium</p>
                         <p><strong>{steps.remainingHeP.toFixed(1)} bar</strong></p>
