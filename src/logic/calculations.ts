@@ -101,7 +101,7 @@ export function calculateBlending(
     return { nHeToAdd, nO2ToAdd, nAirToAdd, nStart, nHeStart, nO2Start };
   };
 
-  let { nHeToAdd, nO2ToAdd, nAirToAdd, nStart, nHeStart, nO2Start } = solveForMoles(current.p);
+  const { nHeToAdd, nO2ToAdd, nAirToAdd, nStart, nHeStart, nO2Start } = solveForMoles(current.p);
 
   // Check if impossible (negative addition required)
   if (nHeToAdd < -0.01 || nO2ToAdd < -0.01 || nAirToAdd < -0.01) {
