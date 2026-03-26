@@ -163,19 +163,35 @@ function App() {
                   </div>
                 </div>
               ) : (
-                steps.steps.map((s, i) => (
-                  <div key={i} className="result-step">
-                    <span className="step-number">{i + 1}</span>
-                    <div className="step-content">
-                      <strong>{s.name}</strong>
-                      <p>Add <span>{s.addP.toFixed(1)} bar</span> to reach <strong>{s.pAfter.toFixed(1)} bar</strong></p>
-                      <p className="mix-info">{Math.round(s.mixAfter.o2 * 100)}/{Math.round(s.mixAfter.he * 100)} (O2/He)</p>
-                      {(s.gas === 'He' || s.gas === 'O2') && (
-                        <p className="subtext">Supply remaining: <strong>{s.supplyRemaining.toFixed(1)} bar</strong></p>
-                      )}
+                <>
+                  {steps.steps.map((s, i) => (
+                    <div key={i} className="result-step">
+                      <span className="step-number">{i + 1}</span>
+                      <div className="step-content">
+                        <strong>{s.name}</strong>
+                        <p>Add <span>{s.addP.toFixed(1)} bar</span> to reach <strong>{s.pAfter.toFixed(1)} bar</strong></p>
+                        <p className="mix-info">{Math.round(s.mixAfter.o2 * 100)}/{Math.round(s.mixAfter.he * 100)} (O2/He)</p>
+                        {(s.gas === 'He' || s.gas === 'O2') && (
+                          <p className="subtext">Supply remaining: <strong>{s.supplyRemaining.toFixed(1)} bar</strong></p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="summary-banner">
+                    <h3>Supply Summary (50L)</h3>
+                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                      <div>
+                        <p className="subtext">Remaining Helium</p>
+                        <p><strong>{steps.remainingHeP.toFixed(1)} bar</strong></p>
+                      </div>
+                      <div>
+                        <p className="subtext">Remaining Oxygen</p>
+                        <p><strong>{steps.remainingO2P.toFixed(1)} bar</strong></p>
+                      </div>
                     </div>
                   </div>
-                ))
+                </>
               )}
             </section>
           </>
