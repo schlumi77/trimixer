@@ -61,7 +61,7 @@ function App() {
   return (
     <div className="app-container">
       <header>
-        <h1>Trimixer</h1>
+        <h1>Trimixer v1.2</h1>
         <div className="mode-toggle">
           <button className={mode === 'plan' ? 'active' : ''} onClick={() => setMode('plan')}>Blending Plan</button>
           <button className={mode === 'topup' ? 'active' : ''} onClick={() => setMode('topup')}>Top-up Simulator</button>
@@ -239,7 +239,7 @@ function App() {
       </main>
 
       <footer>
-        <p>Warning: Gas blending is dangerous. Always analyze and double check.</p>
+        <p>Warning: Gas blending is dangerous. Always analyze and double check. (Version 1.2)</p>
       </footer>
     </div>
   );
