@@ -106,6 +106,22 @@ function App() {
           </div>
         </section>
 
+        <section className="input-card">
+          <h2>Supply Cylinders</h2>
+          <div className="input-group">
+            <label>Supply Size (L)</label>
+            <input type="number" value={formatInput(supply.v)} placeholder="50" onChange={(e) => handleInputChange('supply', 'v', e.target.value)} />
+          </div>
+          <div className="input-group">
+            <label>O2 Supply P (bar)</label>
+            <input type="number" value={formatInput(supply.o2P)} placeholder="300" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
+          </div>
+          <div className="input-group">
+            <label>He Supply P (bar)</label>
+            <input type="number" value={formatInput(supply.heP)} placeholder="300" onChange={(e) => handleInputChange('supply', 'heP', e.target.value)} />
+          </div>
+        </section>
+
         {mode === 'plan' ? (
           <>
             <section className="input-card">
@@ -154,6 +170,9 @@ function App() {
                       <strong>{s.name}</strong>
                       <p>Add <span>{s.addP.toFixed(1)} bar</span> to reach <strong>{s.pAfter.toFixed(1)} bar</strong></p>
                       <p className="mix-info">{Math.round(s.mixAfter.o2 * 100)}/{Math.round(s.mixAfter.he * 100)} (O2/He)</p>
+                      {(s.gas === 'He' || s.gas === 'O2') && (
+                        <p className="subtext">Supply remaining: <strong>{s.supplyRemaining.toFixed(1)} bar</strong></p>
+                      )}
                     </div>
                   </div>
                 ))
