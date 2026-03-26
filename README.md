@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# Trimixer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Trimixer is a specialized gas blending calculator for technical divers. It uses the **Van der Waals equation of state** to provide highly accurate blending plans for Nitrox and Trimix, accounting for the non-ideal behavior of gases at high pressures.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Van der Waals Accuracy**: More precise than simple ideal gas law calculators, especially at typical scuba cylinder pressures (200-300 bar).
+- **Two Blending Modes**:
+  - **Blending Plan**: Calculate the exact amount of Helium and Oxygen needed to reach a target mix from your current cylinder contents.
+  - **Top-up Simulator**: Predict the final mix when adding a specific gas to an existing cylinder.
+- **Fill Order Optimization**: Choose between `He → O2 → Air` or `O2 → He → Air` sequences.
+- **Bleed Calculations**: Automatically detects if the current cylinder content makes the target mix impossible and calculates the required bleed-down pressure.
+- **Temperature Compensation**: Adjust calculations based on the working temperature.
+- **Common Presets**: Quick access to standard mixes (Air, EAN32, EAN50, Tx 21/35, Tx 18/45, etc.).
+- **PWA Ready**: Can be installed on mobile devices for offline use at the dive site or filling station.
 
-## React Compiler
+## 🛠 Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Framework**: React 19 (TypeScript)
+- **Bundler**: Vite
+- **Styling**: Vanilla CSS (Modern Grid/Flexbox)
+- **Mathematical Model**: Van der Waals equation for real gas behavior.
+- **Deployment**: GitHub Pages (via GitHub Actions)
 
-## Expanding the ESLint configuration
+## 📦 Installation & Development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/trimixer.git
+   cd trimixer
+   ```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+3. **Run development server**:
+   ```bash
+   npm run dev
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+4. **Build for production**:
+   ```bash
+   npm run build
+   ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## ⚠️ Safety Warning
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**Gas blending is inherently dangerous.** 
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Handling high-pressure oxygen and mixing breathing gases requires specialized training and equipment. This software is provided as a tool for planning purposes only. 
+
+- **Always** analyze your final gas mix with a calibrated oxygen and (if applicable) helium analyzer.
+- **Never** dive a gas that you haven't personally analyzed and verified.
+- The author(s) of this software are not responsible for any accidents, injuries, or fatalities resulting from the use of this tool.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details (or add one).
