@@ -87,38 +87,42 @@ function App() {
         </section>
 
         <section className="input-card">
-          <h2>Target Cylinder</h2>
-          <div className="input-group">
-            <label>Size (L)</label>
-            <input type="number" value={formatInput(current.v)} placeholder="12" onChange={(e) => handleInputChange('current', 'v', e.target.value)} />
-          </div>
-          <div className="input-group">
-            <label>Initial P (bar)</label>
-            <input type="number" value={formatInput(current.p)} placeholder="0" onChange={(e) => handleInputChange('current', 'p', e.target.value)} />
-          </div>
-          <div className="input-group">
-            <label>Initial O2 (%)</label>
-            <input type="number" value={formatInput(current.o2, true)} placeholder="21" onChange={(e) => handleInputChange('current', 'o2', e.target.value)} />
-          </div>
-          <div className="input-group">
-            <label>Initial He (%)</label>
-            <input type="number" value={formatInput(current.he, true)} placeholder="0" onChange={(e) => handleInputChange('current', 'he', e.target.value)} />
-          </div>
-        </section>
-
-        <section className="input-card">
-          <h2>Supply Cylinders</h2>
-          <div className="input-group">
-            <label>Supply Size (L)</label>
-            <input type="number" value={formatInput(supply.v)} placeholder="50" onChange={(e) => handleInputChange('supply', 'v', e.target.value)} />
-          </div>
-          <div className="input-group">
-            <label>O2 Supply P (bar)</label>
-            <input type="number" value={formatInput(supply.o2P)} placeholder="300" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
-          </div>
-          <div className="input-group">
-            <label>He Supply P (bar)</label>
-            <input type="number" value={formatInput(supply.heP)} placeholder="300" onChange={(e) => handleInputChange('supply', 'heP', e.target.value)} />
+          <h2>Cylinder Configuration</h2>
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div>
+              <h3>Target Cylinder</h3>
+              <div className="input-group">
+                <label>Size (L)</label>
+                <input type="number" value={formatInput(current.v)} placeholder="12" onChange={(e) => handleInputChange('current', 'v', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label>Initial P (bar)</label>
+                <input type="number" value={formatInput(current.p)} placeholder="0" onChange={(e) => handleInputChange('current', 'p', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label>Initial O2 (%)</label>
+                <input type="number" value={formatInput(current.o2, true)} placeholder="21" onChange={(e) => handleInputChange('current', 'o2', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label>Initial He (%)</label>
+                <input type="number" value={formatInput(current.he, true)} placeholder="0" onChange={(e) => handleInputChange('current', 'he', e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <h3>Supply (50L Bottles)</h3>
+              <div className="input-group">
+                <label>Bottle Size (L)</label>
+                <input type="number" value={formatInput(supply.v)} placeholder="50" onChange={(e) => handleInputChange('supply', 'v', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label>O2 Supply P (bar)</label>
+                <input type="number" value={formatInput(supply.o2P)} placeholder="300" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label>He Supply P (bar)</label>
+                <input type="number" value={formatInput(supply.heP)} placeholder="300" onChange={(e) => handleInputChange('supply', 'heP', e.target.value)} />
+              </div>
+            </div>
           </div>
         </section>
 
