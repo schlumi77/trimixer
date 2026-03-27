@@ -15,6 +15,7 @@ export interface Step {
   name: string;
   addP: number;
   pAfter: number;
+  pHot: number;
   mixAfter: { o2: number; he: number };
   supplyRemaining: number;
   gas: 'He' | 'O2' | 'Air' | 'Custom' | 'Bleed';
@@ -83,11 +84,13 @@ export function calculateBlending(
   target: GasMix, 
   supply: SupplyConfig, 
   tempC: number,
-  order: 'HeFirst' | 'O2First'
+  order: 'HeFirst' | 'O2First',
+  fillTempDelta: number = 0
 ): BlendingSteps {
   const warnings: string[] = [];
   const validationErrors: string[] = [];
   const T = tempC + 273.15;
+  const THot = T + fillTempDelta;
   const RT = CONSTANTS.R * T;
 
   // Safety checks
@@ -133,15 +136,22 @@ export function calculateBlending(
     return { nHeToAdd, nO2ToAdd, nAirToAdd, nStart, nHeStart, nO2Start };
   };
 
-  const { nHeToAdd, nO2ToAdd, nAirToAdd, nStart, nHeStart, nO2Start } = solveForMoles(current.p);
+  const initialCheck = solveForMoles(current.p);
 
   // Check if impossible (negative addition required)
-  if (nHeToAdd < -0.01 || nO2ToAdd < -0.01 || nAirToAdd < -0.01) {
-    let bleedP = current.p - 1;
-    while (bleedP > 0) {
-      const check = solveForMoles(bleedP);
-      if (check.nHeToAdd >= -0.01 && check.nO2ToAdd >= -0.01 && check.nAirToAdd >= -0.01) break;
-      bleedP -= 1;
+  if (initialCheck.nHeToAdd < -0.01 || initialCheck.nO2ToAdd < -0.01 || initialCheck.nAirToAdd < -0.01) {
+    let low = 0;
+    let high = current.p;
+    let bleedP = 0;
+    for (let i = 0; i < 20; i++) {
+      const mid = (low + high) / 2;
+      const check = solveForMoles(mid);
+      if (check.nHeToAdd >= -0.01 && check.nO2ToAdd >= -0.01 && check.nAirToAdd >= -0.01) {
+        bleedP = mid;
+        low = mid;
+      } else {
+        high = mid;
+      }
     }
     return {
       steps: [],
@@ -150,9 +160,11 @@ export function calculateBlending(
       safety,
       remainingHeP: supply.heP,
       remainingO2P: supply.o2P,
-      bleedRequired: Math.max(0, bleedP)
+      bleedRequired: Math.floor(bleedP)
     };
   }
+
+  const { nHeToAdd, nO2ToAdd, nAirToAdd, nStart, nHeStart, nO2Start } = initialCheck;
 
   let currentN = nStart;
   let currentO2N = nO2Start;
@@ -170,6 +182,7 @@ export function calculateBlending(
     const o2Fraction = currentO2N / currentN;
     const heFraction = currentHeN / currentN;
     const pAfterGauge = getGaugePressureAtT(currentN, target.v, o2Fraction, heFraction, T);
+    const pHotGauge = getGaugePressureAtT(currentN, target.v, o2Fraction, heFraction, THot);
     
     let supplyLeft = 0;
     if (gas === 'He') supplyLeft = Math.max(0, supply.heP - (nToAdd * RT) / supply.v);
@@ -179,6 +192,7 @@ export function calculateBlending(
       name: `Add ${gas === 'He' ? 'Helium' : gas === 'O2' ? 'Oxygen' : 'Air'}`,
       addP: pAfterGauge - currentGaugeP,
       pAfter: pAfterGauge,
+      pHot: pHotGauge,
       mixAfter: { o2: o2Fraction, he: heFraction },
       supplyRemaining: supplyLeft,
       gas

@@ -144,6 +144,19 @@ input:focus, .select-input:focus {
   color: black;
 }
 
+.hot-pressure {
+  background: rgba(244, 67, 54, 0.1);
+  border-left: 3px solid var(--danger-color);
+  padding: 4px 8px;
+  font-size: 0.95rem;
+  margin: 8px 0 !important;
+  color: #ffcdd2;
+}
+
+.hot-pressure strong {
+  color: #ff5252 !important;
+}
+
 .results-card {
   grid-column: 1 / -1;
   background: #1a2634;

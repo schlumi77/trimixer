@@ -44,12 +44,13 @@ function App() {
   const [target, setTarget] = useLocalStorage<GasMix>('trimixer-target', { o2: 0.21, he: 0, p: 200, v: 12 });
   const [supply, setSupply] = useLocalStorage<SupplyConfig>('trimixer-supply', { o2P: 300, heP: 300, v: 50 });
   const [temp, setTemp] = useLocalStorage<number>('trimixer-temp', 20);
+  const [fillTempDelta, setFillTempDelta] = useLocalStorage<number>('trimixer-fill-temp-delta', 0);
   const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', 'HeFirst');
   const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pToAdd: 100 });
 
   const steps: BlendingSteps = useMemo(() => {
     try {
-      return calculateBlending(current, target, supply, temp, order);
+      return calculateBlending(current, target, supply, temp, order, fillTempDelta);
     } catch (e) {
       console.error('Calculation error:', e);
       return { 
@@ -61,7 +62,7 @@ function App() {
         remainingO2P: 0 
       };
     }
-  }, [current, target, supply, temp, order]);
+  }, [current, target, supply, temp, order, fillTempDelta]);
 
   const topUpResult = useMemo(() => {
     return calculateTopUpResult(current, topUpGas, temp);
@@ -78,6 +79,7 @@ function App() {
     else if (section === 'supply') setSupply(prev => ({ ...prev, [field]: val }));
     else if (section === 'topup') setTopUpGas(prev => ({ ...prev, [field]: (field === 'pToAdd') ? val : val / 100 }));
     else if (field === 'temp') setTemp(val);
+    else if (field === 'fillTempDelta') setFillTempDelta(val);
   };
 
   const formatInput = (val: number, isPercent: boolean = false) => {
@@ -111,9 +113,15 @@ function App() {
       <main className="grid">
         <section className="input-card">
           <h2>Environmental & Config</h2>
-          <div className="input-group">
-            <label>Temperature (°C)</label>
-            <input type="number" value={formatInput(temp)} placeholder="20" onChange={(e) => handleInputChange('config', 'temp', e.target.value)} />
+          <div className="grid">
+            <div className="input-group">
+              <label>Storage Temp (°C)</label>
+              <input type="number" value={formatInput(temp)} placeholder="20" onChange={(e) => handleInputChange('config', 'temp', e.target.value)} />
+            </div>
+            <div className="input-group">
+              <label>Fill Temp Increase (Δ°C)</label>
+              <input type="number" value={formatInput(fillTempDelta)} placeholder="0" onChange={(e) => handleInputChange('config', 'fillTempDelta', e.target.value)} />
+            </div>
           </div>
           {mode === 'plan' && (
             <div className="input-group">
@@ -215,7 +223,11 @@ function App() {
                       <span className="step-number">{i + 1}</span>
                       <div className="step-content">
                         <strong>{s.name}</strong>
-                        <p>Add <span>{s.addP.toFixed(1)} bar</span> to reach <strong>{s.pAfter.toFixed(1)} bar</strong></p>
+                        <p>Add <span>{s.addP.toFixed(1)} bar</span></p>
+                        <p>Settled: <strong>{s.pAfter.toFixed(1)} bar</strong></p>
+                        {fillTempDelta > 0 && (
+                          <p className="hot-pressure">FILL GAUGE: <strong>{s.pHot.toFixed(1)} bar</strong></p>
+                        )}
                         <p className="mix-info">{Math.round(s.mixAfter.o2 * 100)}/{Math.round(s.mixAfter.he * 100)} (O2/He)</p>
                         {(s.gas === 'He' || s.gas === 'O2') && (
                           <p className="subtext">Supply remaining: <strong>{s.supplyRemaining.toFixed(1)} bar</strong></p>

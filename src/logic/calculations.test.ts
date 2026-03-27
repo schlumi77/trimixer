@@ -21,14 +21,28 @@ describe('Gas Physics Engine (Van der Waals)', () => {
     expect(result.steps.at(-1)?.pAfter).toBeCloseTo(200, 0);
   });
 
-  it('handles bleed-down logic when target is impossible', () => {
+  it('handles optimized bleed-down logic', () => {
     // Current is 200 bar Air, target is 100 bar Air (impossible without bleed)
     const current = { o2: 0.21, he: 0, p: 200, v: 12 };
     const target = { o2: 0.21, he: 0, p: 100, v: 12 };
     const result = calculateBlending(current, target, supply, temp, 'HeFirst');
     
     expect(result.bleedRequired).toBeDefined();
-    expect(result.bleedRequired).toBeLessThan(200);
+    // Bleed required should be exactly 100 bar for this simple case
+    expect(result.bleedRequired).toBeCloseTo(100, 0);
+  });
+
+  it('calculates hot pressure for heat of compression', () => {
+    const current = { o2: 0.21, he: 0, p: 0, v: 12 };
+    const target = { o2: 0.32, he: 0, p: 200, v: 12 };
+    const fillTempDelta = 20; // 20°C increase during fill
+    const result = calculateBlending(current, target, supply, temp, 'HeFirst', fillTempDelta);
+    
+    const lastStep = result.steps.at(-1);
+    expect(lastStep).toBeDefined();
+    expect(lastStep?.pAfter).toBeCloseTo(200, 0);
+    // At higher temperature, the same moles of gas should have higher pressure
+    expect(lastStep?.pHot).toBeGreaterThan(lastStep?.pAfter || 0);
   });
 
   it('calculates top-up correctly', () => {
