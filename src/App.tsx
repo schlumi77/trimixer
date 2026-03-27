@@ -89,10 +89,10 @@ function App() {
     return (
       <div className="safety-badges">
         {safety.o2ServiceRequired && (
-          <span className="badge danger">⚠️ O2 CLEAN REQUIRED (>40% O2)</span>
+          <span className="badge danger">⚠️ O2 CLEAN REQUIRED ({'>'}40% O2)</span>
         )}
         {safety.highPressureWarning && (
-          <span className="badge warning">⚠️ HIGH PRESSURE (>232 BAR)</span>
+          <span className="badge warning">⚠️ HIGH PRESSURE ({'>'}232 BAR)</span>
         )}
       </div>
     );
