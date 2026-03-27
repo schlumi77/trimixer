@@ -52,7 +52,14 @@ function App() {
       return calculateBlending(current, target, supply, temp, order);
     } catch (e) {
       console.error('Calculation error:', e);
-      return { steps: [], warnings: ['Error in calculation'], remainingHeP: 0, remainingO2P: 0 };
+      return { 
+        steps: [], 
+        warnings: ['Error in calculation'], 
+        validationErrors: [], 
+        safety: { o2ServiceRequired: false, highPressureWarning: false },
+        remainingHeP: 0, 
+        remainingO2P: 0 
+      };
     }
   }, [current, target, supply, temp, order]);
 
@@ -76,6 +83,19 @@ function App() {
   const formatInput = (val: number, isPercent: boolean = false) => {
     const d = isPercent ? val * 100 : val;
     return d === 0 ? '' : d.toString();
+  };
+
+  const renderSafetyBadges = (safety: { o2ServiceRequired: boolean; highPressureWarning: boolean }) => {
+    return (
+      <div className="safety-badges">
+        {safety.o2ServiceRequired && (
+          <span className="badge danger">⚠️ O2 CLEAN REQUIRED (>40% O2)</span>
+        )}
+        {safety.highPressureWarning && (
+          <span className="badge warning">⚠️ HIGH PRESSURE (>232 BAR)</span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -175,6 +195,8 @@ function App() {
 
             <section className="results-card">
               <h2>Blending Plan</h2>
+              {steps.validationErrors.map((err, i) => <div key={i} className="error-banner">❌ {err}</div>)}
+              {steps.validationErrors.length === 0 && renderSafetyBadges(steps.safety)}
               {steps.warnings.map((w, i) => <div key={i} className="warning-banner">⚠️ {w}</div>)}
               
               {steps.bleedRequired !== undefined ? (
@@ -202,19 +224,21 @@ function App() {
                     </div>
                   ))}
 
-                  <div className="summary-banner">
-                    <h3>Supply Summary (50L)</h3>
-                    <div className="grid">
-                      <div>
-                        <p className="subtext">Remaining Helium</p>
-                        <p><strong>{steps.remainingHeP.toFixed(1)} bar</strong></p>
-                      </div>
-                      <div>
-                        <p className="subtext">Remaining Oxygen</p>
-                        <p><strong>{steps.remainingO2P.toFixed(1)} bar</strong></p>
+                  {steps.steps.length > 0 && (
+                    <div className="summary-banner">
+                      <h3>Supply Summary (50L)</h3>
+                      <div className="grid">
+                        <div>
+                          <p className="subtext">Remaining Helium</p>
+                          <p><strong>{steps.remainingHeP.toFixed(1)} bar</strong></p>
+                        </div>
+                        <div>
+                          <p className="subtext">Remaining Oxygen</p>
+                          <p><strong>{steps.remainingO2P.toFixed(1)} bar</strong></p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </section>
@@ -248,6 +272,7 @@ function App() {
 
             <section className="results-card highlight">
               <h2>Simulation Result</h2>
+              {renderSafetyBadges(topUpResult.safety)}
               <div className="summary-banner large">
                 <p>Final Pressure: <strong>{topUpResult.pFinal.toFixed(1)} bar</strong></p>
                 <p>Final Mix: <strong className="mix-accent">{Math.round(topUpResult.o2Final * 100)}/{Math.round(topUpResult.heFinal * 100)}</strong></p>

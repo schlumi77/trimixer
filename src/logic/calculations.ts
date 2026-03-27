@@ -20,9 +20,17 @@ export interface Step {
   gas: 'He' | 'O2' | 'Air' | 'Custom' | 'Bleed';
 }
 
+export interface SafetyInfo {
+  o2ServiceRequired: boolean;
+  highPressureWarning: boolean;
+  narcoticDepth?: number;
+}
+
 export interface BlendingSteps {
   steps: Step[];
   warnings: string[];
+  validationErrors: string[];
+  safety: SafetyInfo;
   remainingHeP: number;
   remainingO2P: number;
   bleedRequired?: number;
@@ -78,8 +86,32 @@ export function calculateBlending(
   order: 'HeFirst' | 'O2First'
 ): BlendingSteps {
   const warnings: string[] = [];
+  const validationErrors: string[] = [];
   const T = tempC + 273.15;
   const RT = CONSTANTS.R * T;
+
+  // Safety checks
+  const safety: SafetyInfo = {
+    o2ServiceRequired: target.o2 > 0.40,
+    highPressureWarning: target.p > 232,
+  };
+
+  // Bounds Checking
+  if (target.o2 + target.he > 1.0) validationErrors.push('O2 + He cannot exceed 100%');
+  if (current.o2 + current.he > 1.0) validationErrors.push('Current O2 + He cannot exceed 100%');
+  if (target.p > 300) validationErrors.push('Target pressure exceeds maximum limit (300 bar)');
+  if (tempC < -10 || tempC > 50) validationErrors.push('Temperature out of safe blending range (-10 to 50°C)');
+
+  if (validationErrors.length > 0) {
+    return {
+      steps: [],
+      warnings: [],
+      validationErrors,
+      safety,
+      remainingHeP: supply.heP,
+      remainingO2P: supply.o2P
+    };
+  }
   
   const nTotal = getMolesAtT(target.p, target.v, target.o2, target.he, T);
   
@@ -114,6 +146,8 @@ export function calculateBlending(
     return {
       steps: [],
       warnings: [`Desired mix is impossible with current cylinder content. Bleed required.`],
+      validationErrors: [],
+      safety,
       remainingHeP: supply.heP,
       remainingO2P: supply.o2P,
       bleedRequired: Math.max(0, bleedP)
@@ -167,6 +201,8 @@ export function calculateBlending(
   return {
     steps,
     warnings,
+    validationErrors: [],
+    safety,
     remainingHeP: Math.max(0, supply.heP - (nHeToAdd * RT) / supply.v),
     remainingO2P: Math.max(0, supply.o2P - (nO2ToAdd * RT) / supply.v)
   };
@@ -176,7 +212,7 @@ export function calculateTopUpResult(
   current: GasMix,
   addedGas: { o2: number; he: number; pToAdd: number },
   tempC: number
-): { pFinal: number; o2Final: number; heFinal: number } {
+): { pFinal: number; o2Final: number; heFinal: number; safety: SafetyInfo } {
   const T = tempC + 273.15;
   const nInitial = getMolesAtT(current.p, current.v, current.o2, current.he, T);
   const targetGaugeP = current.p + addedGas.pToAdd;
@@ -194,5 +230,13 @@ export function calculateTopUpResult(
     nAdded += diff * (current.v / (CONSTANTS.R * T)); 
   }
 
-  return { pFinal: targetGaugeP, o2Final, heFinal };
+  return { 
+    pFinal: targetGaugeP, 
+    o2Final, 
+    heFinal,
+    safety: {
+      o2ServiceRequired: o2Final > 0.40,
+      highPressureWarning: targetGaugeP > 232
+    }
+  };
 }

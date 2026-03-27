@@ -101,17 +101,47 @@ input:focus, .select-input:focus {
 }
 
 .warning-banner {
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid var(--warning-color);
+  padding: 10px 15px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  color: #ffe0b2;
+}
+
+.error-banner {
   background: rgba(244, 67, 54, 0.2);
   border: 1px solid var(--danger-color);
   padding: 10px 15px;
   border-radius: var(--border-radius);
   margin-bottom: 20px;
   color: #ffcdd2;
+  font-weight: 500;
 }
 
-.warning-banner p {
-  margin: 5px 0;
-  font-size: 0.95rem;
+.safety-badges {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.badge.danger {
+  background: var(--danger-color);
+  color: white;
+}
+
+.badge.warning {
+  background: var(--warning-color);
+  color: black;
 }
 
 .results-card {
