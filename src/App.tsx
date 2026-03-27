@@ -1,7 +1,27 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { calculateBlending, calculateTopUpResult } from './logic/calculations';
 import type { GasMix, SupplyConfig, BlendingSteps } from './logic/calculations';
 import './App.css';
+
+const useLocalStorage = <T,>(key: string, defaultValue: T) => {
+  const [value, setValue] = useState<T>(() => {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return defaultValue;
+      }
+    }
+    return defaultValue;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue] as const;
+};
 
 function App() {
   const PRESETS: Record<string, { o2: number; he: number; label: string }> = {
@@ -20,11 +40,11 @@ function App() {
   };
 
   const [mode, setMode] = useState<'plan' | 'topup'>('plan');
-  const [current, setCurrent] = useState<GasMix>({ o2: 0.21, he: 0, p: 0, v: 12 });
-  const [target, setTarget] = useState<GasMix>({ o2: 0.21, he: 0, p: 200, v: 12 });
-  const [supply, setSupply] = useState<SupplyConfig>({ o2P: 300, heP: 300, v: 50 });
-  const [temp, setTemp] = useState<number>(20);
-  const [order, setOrder] = useState<'HeFirst' | 'O2First'>('HeFirst');
+  const [current, setCurrent] = useLocalStorage<GasMix>('trimixer-current', { o2: 0.21, he: 0, p: 0, v: 12 });
+  const [target, setTarget] = useLocalStorage<GasMix>('trimixer-target', { o2: 0.21, he: 0, p: 200, v: 12 });
+  const [supply, setSupply] = useLocalStorage<SupplyConfig>('trimixer-supply', { o2P: 300, heP: 300, v: 50 });
+  const [temp, setTemp] = useLocalStorage<number>('trimixer-temp', 20);
+  const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', 'HeFirst');
   const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pToAdd: 100 });
 
   const steps: BlendingSteps = useMemo(() => {
