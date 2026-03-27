@@ -198,7 +198,7 @@ function App() {
               </div>
             </div>
             <div>
-              <h3>Supply (50L Bottles)</h3>
+              <h3>Supply Cylinders</h3>
               <div className="input-group">
                 <label>Bottle Size (L)</label>
                 <input type="number" value={formatInput(supply.v)} placeholder="50" onChange={(e) => handleInputChange('supply', 'v', e.target.value)} />
