@@ -87,7 +87,7 @@ function App() {
   const [temp, setTemp] = useLocalStorage<number>('trimixer-temp', 20);
   const [fillTempDelta, setFillTempDelta] = useLocalStorage<number>('trimixer-fill-temp-delta', 0);
   const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', 'HeFirst');
-  const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pToAdd: 100 });
+  const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pFinal: 200 });
 
   const steps: BlendingSteps = useMemo(() => {
     try {
@@ -123,7 +123,7 @@ function App() {
     }
     else if (section === 'target') setTarget(prev => ({ ...prev, [field]: (field === 'p' || field === 'v') ? val : val / 100 }));
     else if (section === 'supply') setSupply(prev => ({ ...prev, [field]: val }));
-    else if (section === 'topup') setTopUpGas(prev => ({ ...prev, [field]: (field === 'pToAdd') ? val : val / 100 }));
+    else if (section === 'topup') setTopUpGas(prev => ({ ...prev, [field]: (field === 'pFinal') ? val : val / 100 }));
     else if (field === 'temp') setTemp(val);
     else if (field === 'fillTempDelta') setFillTempDelta(val);
   };
@@ -318,8 +318,8 @@ function App() {
                 </select>
               </div>
               <div className="input-group">
-                <label>P to Add (bar)</label>
-                <input type="number" value={formatInput(topUpGas.pToAdd)} placeholder="100" onChange={(e) => handleInputChange('topup', 'pToAdd', e.target.value)} />
+                <label>Final pressure (bar)</label>
+                <input type="number" value={formatInput(topUpGas.pFinal)} placeholder="200" onChange={(e) => handleInputChange('topup', 'pFinal', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>O2 of Top-up (%)</label>

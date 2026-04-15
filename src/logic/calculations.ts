@@ -229,7 +229,7 @@ export function calculateBlending(
 
 export function calculateTopUpResult(
   current: GasMix,
-  addedGas: { o2: number; he: number; pToAdd: number },
+  topUpGas: { o2: number; he: number; pFinal: number },
   tempC: number,
   fillTempDelta: number = 0
 ): { pFinal: number; o2Final: number; heFinal: number; pSettled: number; safety: SafetyInfo } {
@@ -237,23 +237,38 @@ export function calculateTopUpResult(
   const THot = T + fillTempDelta;
   const nInitial = getMolesAtT(current.p, current.v, current.o2, current.he, T);
   
-  // We assume pToAdd is what is seen on the gauge (hot)
-  const targetHotP = current.p + addedGas.pToAdd;
+  // targetHotP is what is seen on the gauge during the fill (hot)
+  const targetHotP = topUpGas.pFinal;
   
-  // Initial guess for nAdded
-  let nAdded = getMolesAtT(addedGas.pToAdd, current.v, addedGas.o2, addedGas.he, T);
+  if (targetHotP <= current.p) {
+    return {
+      pFinal: targetHotP,
+      o2Final: current.o2,
+      heFinal: current.he,
+      pSettled: current.p,
+      safety: {
+        o2ServiceRequired: current.o2 > 0.40,
+        highPressureWarning: targetHotP > 232
+      }
+    };
+  }
+
+  // Initial guess for nAdded based on simple Ideal Gas Law delta
+  const pDelta = targetHotP - current.p;
+  let nAdded = getMolesAtT(pDelta, current.v, topUpGas.o2, topUpGas.he, T);
   let o2Final = 0;
   let heFinal = 0;
 
   for (let i = 0; i < 20; i++) {
     const totalN = nInitial + nAdded;
-    o2Final = (nInitial * current.o2 + nAdded * addedGas.o2) / totalN;
-    heFinal = (nInitial * current.he + nAdded * addedGas.he) / totalN;
+    o2Final = (nInitial * current.o2 + nAdded * topUpGas.o2) / totalN;
+    heFinal = (nInitial * current.he + nAdded * topUpGas.he) / totalN;
     
     // The gauge shows targetHotP when the tank is at THot
     const pCalcHot = getGaugePressureAtT(totalN, current.v, o2Final, heFinal, THot);
     const diff = targetHotP - pCalcHot;
     if (Math.abs(diff) < 0.01) break;
+    // Simple proportional adjustment for next iteration
     nAdded += diff * (current.v / (CONSTANTS.R * THot)); 
   }
 
