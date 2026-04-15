@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { calculateBlending, calculateTopUpResult } from './logic/calculations';
-import type { GasMix, SupplyConfig, BlendingSteps, Step } from './logic/calculations';
+import { calculateBlending, calculateTopUpResult } from './logic/calculations.ts';
+import type { GasMix, SupplyConfig, BlendingSteps, Step } from './logic/calculations.ts';
 import './App.css';
 
 const MixingChart = ({ initialMix, steps }: { initialMix: { o2: number, he: number }, steps: Step[] }) => {
