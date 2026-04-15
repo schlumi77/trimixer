@@ -50,7 +50,7 @@ const useLocalStorage = <T,>(key: string, defaultValue: T) => {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
+      } catch {
         return defaultValue;
       }
     }
