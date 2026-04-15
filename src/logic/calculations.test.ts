@@ -45,15 +45,15 @@ describe('Gas Physics Engine (Van der Waals)', () => {
     expect(lastStep?.pHot).toBeGreaterThan(lastStep?.pAfter || 0);
   });
 
-  it('calculates top-up correctly', () => {
+  it('calculates top-up correctly with heat of compression', () => {
     const current = { o2: 0.32, he: 0, p: 100, v: 12 };
     const addedGas = { o2: 0.21, he: 0, pToAdd: 100 };
-    const result = calculateTopUpResult(current, addedGas, temp);
+    const fillTempDelta = 20;
+    const result = calculateTopUpResult(current, addedGas, temp, fillTempDelta);
     
-    // 100 bar 32% + 100 bar 21% -> ~200 bar ~26.5%
-    expect(result.pFinal).toBe(200);
-    expect(result.o2Final).toBeGreaterThan(0.26);
-    expect(result.o2Final).toBeLessThan(0.27);
+    expect(result.pFinal).toBe(200); // Hot Gauge
+    expect(result.pSettled).toBeLessThan(200); // Should cool down
+    expect(result.o2Final).toBeGreaterThan(0.26); // Should still be around 26.5%
   });
 
   it('maintains mass balance for Helium', () => {

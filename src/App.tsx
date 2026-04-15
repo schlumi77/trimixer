@@ -106,8 +106,8 @@ function App() {
   }, [current, target, supply, temp, order, fillTempDelta]);
 
   const topUpResult = useMemo(() => {
-    return calculateTopUpResult(current, topUpGas, temp);
-  }, [current, topUpGas, temp]);
+    return calculateTopUpResult(current, topUpGas, temp, fillTempDelta);
+  }, [current, topUpGas, temp, fillTempDelta]);
 
   const handleInputChange = (
     section: 'current' | 'target' | 'supply' | 'config' | 'topup',
@@ -115,7 +115,12 @@ function App() {
     value: string
   ) => {
     const val = value === '' ? 0 : parseFloat(value);
-    if (section === 'current') setCurrent(prev => ({ ...prev, [field]: (field === 'p' || field === 'v') ? val : val / 100 }));
+    if (section === 'current') {
+      setCurrent(prev => ({ ...prev, [field]: (field === 'p' || field === 'v') ? val : val / 100 }));
+      if (field === 'v') {
+        setTarget(prev => ({ ...prev, v: val }));
+      }
+    }
     else if (section === 'target') setTarget(prev => ({ ...prev, [field]: (field === 'p' || field === 'v') ? val : val / 100 }));
     else if (section === 'supply') setSupply(prev => ({ ...prev, [field]: val }));
     else if (section === 'topup') setTopUpGas(prev => ({ ...prev, [field]: (field === 'pToAdd') ? val : val / 100 }));
@@ -339,6 +344,13 @@ function App() {
 
       <footer>
         <p>Warning: Gas blending is dangerous. Always analyze and double check. (Version 1.2)</p>
+      </footer>
+    </div>
+  );
+}
+
+export default App;
+blending is dangerous. Always analyze and double check. (Version 1.2)</p>
       </footer>
     </div>
   );

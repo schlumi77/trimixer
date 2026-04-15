@@ -185,8 +185,11 @@ export function calculateBlending(
     const pHotGauge = getGaugePressureAtT(currentN, target.v, o2Fraction, heFraction, THot);
     
     let supplyLeft = 0;
-    if (gas === 'He') supplyLeft = Math.max(0, supply.heP - (nToAdd * RT) / supply.v);
-    if (gas === 'O2') supplyLeft = Math.max(0, supply.o2P - (nToAdd * RT) / supply.v);
+    if (gas === 'He' || gas === 'O2') {
+      const nSupplyInitial = getMolesAtT(gas === 'He' ? supply.heP : supply.o2P, supply.v, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
+      const nSupplyFinal = nSupplyInitial - nToAdd;
+      supplyLeft = getGaugePressureAtT(nSupplyFinal, supply.v, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
+    }
 
     steps.push({
       name: `Add ${gas === 'He' ? 'Helium' : gas === 'O2' ? 'Oxygen' : 'Air'}`,
@@ -194,7 +197,7 @@ export function calculateBlending(
       pAfter: pAfterGauge,
       pHot: pHotGauge,
       mixAfter: { o2: o2Fraction, he: heFraction },
-      supplyRemaining: supplyLeft,
+      supplyRemaining: Math.max(0, supplyLeft),
       gas
     });
     
@@ -212,45 +215,60 @@ export function calculateBlending(
   }
   addStep('Air', nAirToAdd);
 
+  const nHeInitialSupply = getMolesAtT(supply.heP, supply.v, 0, 1.0, T);
+  const nO2InitialSupply = getMolesAtT(supply.o2P, supply.v, 1.0, 0, T);
+  
   return {
     steps,
     warnings,
     validationErrors: [],
     safety,
-    remainingHeP: Math.max(0, supply.heP - (nHeToAdd * RT) / supply.v),
-    remainingO2P: Math.max(0, supply.o2P - (nO2ToAdd * RT) / supply.v)
+    remainingHeP: Math.max(0, getGaugePressureAtT(nHeInitialSupply - nHeToAdd, supply.v, 0, 1.0, T)),
+    remainingO2P: Math.max(0, getGaugePressureAtT(nO2InitialSupply - nO2ToAdd, supply.v, 1.0, 0, T))
   };
 }
 
 export function calculateTopUpResult(
   current: GasMix,
   addedGas: { o2: number; he: number; pToAdd: number },
-  tempC: number
-): { pFinal: number; o2Final: number; heFinal: number; safety: SafetyInfo } {
+  tempC: number,
+  fillTempDelta: number = 0
+): { pFinal: number; o2Final: number; heFinal: number; pSettled: number; safety: SafetyInfo } {
   const T = tempC + 273.15;
+  const THot = T + fillTempDelta;
   const nInitial = getMolesAtT(current.p, current.v, current.o2, current.he, T);
-  const targetGaugeP = current.p + addedGas.pToAdd;
+  
+  // We assume pToAdd is what is seen on the gauge (hot)
+  const targetHotP = current.p + addedGas.pToAdd;
+  
+  // Initial guess for nAdded
   let nAdded = getMolesAtT(addedGas.pToAdd, current.v, addedGas.o2, addedGas.he, T);
   let o2Final = 0;
   let heFinal = 0;
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 20; i++) {
     const totalN = nInitial + nAdded;
     o2Final = (nInitial * current.o2 + nAdded * addedGas.o2) / totalN;
     heFinal = (nInitial * current.he + nAdded * addedGas.he) / totalN;
-    const pCalc = getGaugePressureAtT(totalN, current.v, o2Final, heFinal, T);
-    const diff = targetGaugeP - pCalc;
+    
+    // The gauge shows targetHotP when the tank is at THot
+    const pCalcHot = getGaugePressureAtT(totalN, current.v, o2Final, heFinal, THot);
+    const diff = targetHotP - pCalcHot;
     if (Math.abs(diff) < 0.01) break;
-    nAdded += diff * (current.v / (CONSTANTS.R * T)); 
+    nAdded += diff * (current.v / (CONSTANTS.R * THot)); 
   }
 
+  const finalN = nInitial + nAdded;
+  const pSettled = getGaugePressureAtT(finalN, current.v, o2Final, heFinal, T);
+
   return { 
-    pFinal: targetGaugeP, 
+    pFinal: targetHotP, 
     o2Final, 
     heFinal,
+    pSettled,
     safety: {
       o2ServiceRequired: o2Final > 0.40,
-      highPressureWarning: targetGaugeP > 232
+      highPressureWarning: targetHotP > 232
     }
   };
 }
