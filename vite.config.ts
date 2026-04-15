@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
-  base: '/trimixer/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/trimixer/' : '/',
   plugins: [
     react(),
     VitePWA({
@@ -24,4 +24,4 @@ export default defineConfig({
       }
     })
   ],
-})
+}))
