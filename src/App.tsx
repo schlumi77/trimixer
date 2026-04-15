@@ -350,10 +350,3 @@ function App() {
 }
 
 export default App;
-blending is dangerous. Always analyze and double check. (Version 1.2)</p>
-      </footer>
-    </div>
-  );
-}
-
-export default App;

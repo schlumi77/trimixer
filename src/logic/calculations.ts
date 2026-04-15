@@ -91,7 +91,6 @@ export function calculateBlending(
   const validationErrors: string[] = [];
   const T = tempC + 273.15;
   const THot = T + fillTempDelta;
-  const RT = CONSTANTS.R * T;
 
   // Safety checks
   const safety: SafetyInfo = {
