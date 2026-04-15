@@ -115,15 +115,29 @@ function App() {
     value: string
   ) => {
     const val = value === '' ? 0 : parseFloat(value);
+    
+    // Fraction validation (0-100%)
+    if ((field === 'o2' || field === 'he') && val > 100) return;
+
     if (section === 'current') {
+      if (field === 'o2' && (val / 100 + current.he > 1.0)) return;
+      if (field === 'he' && (val / 100 + current.o2 > 1.0)) return;
       setCurrent(prev => ({ ...prev, [field]: (field === 'p' || field === 'v') ? val : val / 100 }));
       if (field === 'v') {
         setTarget(prev => ({ ...prev, v: val }));
       }
     }
-    else if (section === 'target') setTarget(prev => ({ ...prev, [field]: (field === 'p' || field === 'v') ? val : val / 100 }));
+    else if (section === 'target') {
+      if (field === 'o2' && (val / 100 + target.he > 1.0)) return;
+      if (field === 'he' && (val / 100 + target.o2 > 1.0)) return;
+      setTarget(prev => ({ ...prev, [field]: (field === 'p' || field === 'v') ? val : val / 100 }));
+    }
     else if (section === 'supply') setSupply(prev => ({ ...prev, [field]: val }));
-    else if (section === 'topup') setTopUpGas(prev => ({ ...prev, [field]: (field === 'pFinal') ? val : val / 100 }));
+    else if (section === 'topup') {
+      if (field === 'o2' && (val / 100 + topUpGas.he > 1.0)) return;
+      if (field === 'he' && (val / 100 + topUpGas.o2 > 1.0)) return;
+      setTopUpGas(prev => ({ ...prev, [field]: (field === 'pFinal') ? val : val / 100 }));
+    }
     else if (field === 'temp') setTemp(val);
     else if (field === 'fillTempDelta') setFillTempDelta(val);
   };
