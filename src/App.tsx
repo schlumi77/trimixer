@@ -130,7 +130,9 @@ function App() {
 
   const formatInput = (val: number, isPercent: boolean = false) => {
     const d = isPercent ? val * 100 : val;
-    return d === 0 ? '' : d.toString();
+    // Fix floating point precision issues (e.g., 0.07 * 100 = 7.000000000000001)
+    const rounded = Math.round(d * 1e10) / 1e10;
+    return rounded === 0 ? '' : rounded.toString();
   };
 
   const renderSafetyBadges = (safety: { o2ServiceRequired: boolean; highPressureWarning: boolean }) => {
