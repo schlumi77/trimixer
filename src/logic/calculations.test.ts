@@ -49,11 +49,12 @@ describe('Gas Physics Engine (Van der Waals)', () => {
     const current = { o2: 0.32, he: 0, p: 100, v: 12 };
     const topUpGas = { o2: 0.21, he: 0, pFinal: 200 };
     const fillTempDelta = 20;
-    const result = calculateTopUpResult(current, topUpGas, temp, fillTempDelta);
+    const result = calculateTopUpResult(current, topUpGas, supply, temp, fillTempDelta);
     
     expect(result.pFinal).toBe(200); // Hot Gauge
     expect(result.pSettled).toBeLessThan(200); // Should cool down
     expect(result.o2Final).toBeGreaterThan(0.26); // Should still be around 26.5%
+    expect(result.remainingSupplyP).toBeLessThan(300); // Should consume supply
   });
 
   it('maintains mass balance for Helium', () => {

@@ -106,8 +106,8 @@ function App() {
   }, [current, target, supply, temp, order, fillTempDelta]);
 
   const topUpResult = useMemo(() => {
-    return calculateTopUpResult(current, topUpGas, temp, fillTempDelta);
-  }, [current, topUpGas, temp, fillTempDelta]);
+    return calculateTopUpResult(current, topUpGas, supply, temp, fillTempDelta);
+  }, [current, topUpGas, supply, temp, fillTempDelta]);
 
   const handleInputChange = (
     section: 'current' | 'target' | 'supply' | 'config' | 'topup',
@@ -337,7 +337,9 @@ function App() {
               <div className="summary-banner large">
                 <p>Final Pressure: <strong>{topUpResult.pFinal.toFixed(1)} bar</strong></p>
                 <p>Final Mix: <strong className="mix-accent">{Math.round(topUpResult.o2Final * 100)}/{Math.round(topUpResult.heFinal * 100)}</strong></p>
-                <p className="subtext">Van der Waals calculated at {temp}°C</p>
+                <p className="subtext">Settled (Cooled): {topUpResult.pSettled.toFixed(1)} bar</p>
+                <p className="subtext">Remaining Supply: <strong>{topUpResult.remainingSupplyP.toFixed(1)} bar</strong></p>
+                <p className="subtext small">Van der Waals calculated at {temp}°C</p>
               </div>
             </section>
           </>

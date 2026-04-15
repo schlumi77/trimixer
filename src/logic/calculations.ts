@@ -230,9 +230,10 @@ export function calculateBlending(
 export function calculateTopUpResult(
   current: GasMix,
   topUpGas: { o2: number; he: number; pFinal: number },
+  supply: SupplyConfig,
   tempC: number,
   fillTempDelta: number = 0
-): { pFinal: number; o2Final: number; heFinal: number; pSettled: number; safety: SafetyInfo } {
+): { pFinal: number; o2Final: number; heFinal: number; pSettled: number; safety: SafetyInfo; remainingSupplyP: number } {
   const T = tempC + 273.15;
   const THot = T + fillTempDelta;
   const nInitial = getMolesAtT(current.p, current.v, current.o2, current.he, T);
@@ -249,7 +250,8 @@ export function calculateTopUpResult(
       safety: {
         o2ServiceRequired: current.o2 > 0.40,
         highPressureWarning: targetHotP > 232
-      }
+      },
+      remainingSupplyP: topUpGas.he > 0 ? supply.heP : supply.o2P
     };
   }
 
@@ -267,13 +269,21 @@ export function calculateTopUpResult(
     // The gauge shows targetHotP when the tank is at THot
     const pCalcHot = getGaugePressureAtT(totalN, current.v, o2Final, heFinal, THot);
     const diff = targetHotP - pCalcHot;
-    if (Math.abs(diff) < 0.01) break;
+    if (Math.abs(diff) < 0.001) break;
     // Simple proportional adjustment for next iteration
     nAdded += diff * (current.v / (CONSTANTS.R * THot)); 
   }
 
   const finalN = nInitial + nAdded;
   const pSettled = getGaugePressureAtT(finalN, current.v, o2Final, heFinal, T);
+
+  // Remaining supply
+  const isHeSupply = topUpGas.he > 0;
+  const initialP = isHeSupply ? supply.heP : supply.o2P;
+  const supplyMix = isHeSupply ? { o2: 0, he: 1.0 } : { o2: topUpGas.o2, he: topUpGas.he }; // Simple assumption
+  const nSupplyInitial = getMolesAtT(initialP, supply.v, supplyMix.o2, supplyMix.he, T);
+  const nSupplyFinal = nSupplyInitial - nAdded;
+  const pRemaining = getGaugePressureAtT(nSupplyFinal, supply.v, supplyMix.o2, supplyMix.he, T);
 
   return { 
     pFinal: targetHotP, 
@@ -283,6 +293,7 @@ export function calculateTopUpResult(
     safety: {
       o2ServiceRequired: o2Final > 0.40,
       highPressureWarning: targetHotP > 232
-    }
+    },
+    remainingSupplyP: Math.max(0, pRemaining)
   };
 }
