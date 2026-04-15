@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig(({ command }) => {
   const isBuild = command === 'build';
   return {
-    base: isBuild ? '/trimixer/' : '/',
+    base: './',
     plugins: [
       react(),
       VitePWA({
