@@ -162,10 +162,28 @@ function App() {
     );
   };
 
+  const resetInputs = () => {
+    if (confirm('Reset all values to default?')) {
+      setCurrent({ o2: 0.21, he: 0, p: 0, v: 12 });
+      setTarget({ o2: 0.21, he: 0, p: 200, v: 12 });
+      setSupply({ o2P: 300, heP: 300, v: 50 });
+      setTemp(20);
+      setFillTempDelta(0);
+      setOrder('HeFirst');
+    }
+  };
+
   return (
     <div className="app-container">
       <header>
-        <h1>Trimixer v1.2</h1>
+        <div className="header-top">
+          <h1>Trimixer</h1>
+          <button className="reset-button" onClick={resetInputs} title="Reset all inputs">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
         <div className="mode-toggle">
           <button className={mode === 'plan' ? 'active' : ''} onClick={() => setMode('plan')}>Blending Plan</button>
           <button className={mode === 'topup' ? 'active' : ''} onClick={() => setMode('topup')}>Top-up Simulator</button>
@@ -178,11 +196,11 @@ function App() {
           <div className="grid">
             <div className="input-group">
               <label>Storage Temp (°C)</label>
-              <input type="number" value={formatInput(temp)} placeholder="20" onChange={(e) => handleInputChange('config', 'temp', e.target.value)} />
+              <input type="number" inputMode="decimal" value={formatInput(temp)} placeholder="20" onChange={(e) => handleInputChange('config', 'temp', e.target.value)} />
             </div>
             <div className="input-group">
               <label>Fill Temp Increase (Δ°C)</label>
-              <input type="number" value={formatInput(fillTempDelta)} placeholder="0" onChange={(e) => handleInputChange('config', 'fillTempDelta', e.target.value)} />
+              <input type="number" inputMode="decimal" value={formatInput(fillTempDelta)} placeholder="0" onChange={(e) => handleInputChange('config', 'fillTempDelta', e.target.value)} />
             </div>
           </div>
           {mode === 'plan' && (
@@ -203,34 +221,34 @@ function App() {
               <h3>Target Cylinder</h3>
               <div className="input-group">
                 <label>Size (L)</label>
-                <input type="number" value={formatInput(current.v)} placeholder="12" onChange={(e) => handleInputChange('current', 'v', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(current.v)} placeholder="12" onChange={(e) => handleInputChange('current', 'v', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>Initial P (bar)</label>
-                <input type="number" value={formatInput(current.p)} placeholder="0" onChange={(e) => handleInputChange('current', 'p', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(current.p)} placeholder="0" onChange={(e) => handleInputChange('current', 'p', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>Initial O2 (%)</label>
-                <input type="number" value={formatInput(current.o2, true)} placeholder="21" onChange={(e) => handleInputChange('current', 'o2', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(current.o2, true)} placeholder="21" onChange={(e) => handleInputChange('current', 'o2', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>Initial He (%)</label>
-                <input type="number" value={formatInput(current.he, true)} placeholder="0" onChange={(e) => handleInputChange('current', 'he', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(current.he, true)} placeholder="0" onChange={(e) => handleInputChange('current', 'he', e.target.value)} />
               </div>
             </div>
             <div>
               <h3>Supply Cylinders</h3>
               <div className="input-group">
                 <label>Bottle Size (L)</label>
-                <input type="number" value={formatInput(supply.v)} placeholder="50" onChange={(e) => handleInputChange('supply', 'v', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(supply.v)} placeholder="50" onChange={(e) => handleInputChange('supply', 'v', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>O2 Supply P (bar)</label>
-                <input type="number" value={formatInput(supply.o2P)} placeholder="300" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(supply.o2P)} placeholder="300" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>He Supply P (bar)</label>
-                <input type="number" value={formatInput(supply.heP)} placeholder="300" onChange={(e) => handleInputChange('supply', 'heP', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(supply.heP)} placeholder="300" onChange={(e) => handleInputChange('supply', 'heP', e.target.value)} />
               </div>
             </div>
           </div>
@@ -251,17 +269,18 @@ function App() {
               </div>
               <div className="input-group">
                 <label>Final P (bar)</label>
-                <input type="number" value={formatInput(target.p)} placeholder="200" onChange={(e) => handleInputChange('target', 'p', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(target.p)} placeholder="200" onChange={(e) => handleInputChange('target', 'p', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>Final O2 (%)</label>
-                <input type="number" value={formatInput(target.o2, true)} placeholder="21" onChange={(e) => handleInputChange('target', 'o2', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(target.o2, true)} placeholder="21" onChange={(e) => handleInputChange('target', 'o2', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>Final He (%)</label>
-                <input type="number" value={formatInput(target.he, true)} placeholder="0" onChange={(e) => handleInputChange('target', 'he', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(target.he, true)} placeholder="0" onChange={(e) => handleInputChange('target', 'he', e.target.value)} />
               </div>
             </section>
+
 
             <section className="results-card">
               <h2>Blending Plan</h2>
@@ -333,15 +352,15 @@ function App() {
               </div>
               <div className="input-group">
                 <label>Final pressure (bar)</label>
-                <input type="number" value={formatInput(topUpGas.pFinal)} placeholder="200" onChange={(e) => handleInputChange('topup', 'pFinal', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(topUpGas.pFinal)} placeholder="200" onChange={(e) => handleInputChange('topup', 'pFinal', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>O2 of Top-up (%)</label>
-                <input type="number" value={formatInput(topUpGas.o2, true)} placeholder="21" onChange={(e) => handleInputChange('topup', 'o2', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(topUpGas.o2, true)} placeholder="21" onChange={(e) => handleInputChange('topup', 'o2', e.target.value)} />
               </div>
               <div className="input-group">
                 <label>He of Top-up (%)</label>
-                <input type="number" value={formatInput(topUpGas.he, true)} placeholder="0" onChange={(e) => handleInputChange('topup', 'he', e.target.value)} />
+                <input type="number" inputMode="decimal" value={formatInput(topUpGas.he, true)} placeholder="0" onChange={(e) => handleInputChange('topup', 'he', e.target.value)} />
               </div>
             </section>
 
