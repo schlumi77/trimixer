@@ -45,6 +45,26 @@ const CONSTANTS = {
   P_ATM: 1.01325,
 };
 
+/** Operational and safety limits used for validation and warnings. */
+export const LIMITS = {
+  /** Maximum target fill pressure accepted (bar, gauge). */
+  MAX_PRESSURE: 300,
+  /** Above this gauge pressure a standard-rated cylinder warning is raised (bar). */
+  HIGH_PRESSURE: 232,
+  /** O2 fraction above which oxygen-clean service is required. */
+  O2_CLEAN_FRACTION: 0.4,
+  /** Safe ambient blending temperature range (°C). */
+  TEMP_MIN: -10,
+  TEMP_MAX: 50,
+};
+
+/**
+ * Gauge pressure returned when the requested gas quantity cannot physically fit
+ * in the given volume (molar volume at or below the Van der Waals covolume b).
+ * A large sentinel keeps downstream "exceeds pressure" comparisons truthful.
+ */
+const OVERFULL_PRESSURE = 999;
+
 function getMixParams(o2: number, he: number) {
   const n2 = Math.max(0, 1 - o2 - he);
   const b = o2 * CONSTANTS.O2.b + he * CONSTANTS.HE.b + n2 * CONSTANTS.N2.b;
@@ -58,7 +78,7 @@ function getGaugePressureAtT(n: number, V: number, o2: number, he: number, T: nu
   if (n <= 0) return -CONSTANTS.P_ATM;
   const { a, b } = getMixParams(o2, he);
   const Vm = V / n;
-  if (Vm <= b) return 999;
+  if (Vm <= b) return OVERFULL_PRESSURE;
   const pAbs = (CONSTANTS.R * T) / (Vm - b) - a / (Vm * Vm);
   return pAbs - CONSTANTS.P_ATM;
 }
@@ -94,15 +114,22 @@ export function calculateBlending(
 
   // Safety checks
   const safety: SafetyInfo = {
-    o2ServiceRequired: target.o2 > 0.40,
-    highPressureWarning: target.p > 232,
+    o2ServiceRequired: target.o2 > LIMITS.O2_CLEAN_FRACTION,
+    highPressureWarning: target.p > LIMITS.HIGH_PRESSURE,
   };
 
   // Bounds Checking
   if (target.o2 + target.he > 1.0) validationErrors.push('O2 + He cannot exceed 100%');
   if (current.o2 + current.he > 1.0) validationErrors.push('Current O2 + He cannot exceed 100%');
-  if (target.p > 300) validationErrors.push('Target pressure exceeds maximum limit (300 bar)');
-  if (tempC < -10 || tempC > 50) validationErrors.push('Temperature out of safe blending range (-10 to 50°C)');
+  if (target.o2 < 0 || target.he < 0 || current.o2 < 0 || current.he < 0)
+    validationErrors.push('Gas fractions cannot be negative');
+  if (target.p > LIMITS.MAX_PRESSURE)
+    validationErrors.push(`Target pressure exceeds maximum limit (${LIMITS.MAX_PRESSURE} bar)`);
+  if (target.p <= 0) validationErrors.push('Target pressure must be greater than 0 bar');
+  if (current.p < 0) validationErrors.push('Current pressure cannot be negative');
+  if (current.v <= 0 || target.v <= 0) validationErrors.push('Cylinder volume must be greater than 0 L');
+  if (tempC < LIMITS.TEMP_MIN || tempC > LIMITS.TEMP_MAX)
+    validationErrors.push(`Temperature out of safe blending range (${LIMITS.TEMP_MIN} to ${LIMITS.TEMP_MAX}°C)`);
 
   if (validationErrors.length > 0) {
     return {
@@ -248,8 +275,8 @@ export function calculateTopUpResult(
       heFinal: current.he,
       pSettled: current.p,
       safety: {
-        o2ServiceRequired: current.o2 > 0.40,
-        highPressureWarning: targetHotP > 232
+        o2ServiceRequired: current.o2 > LIMITS.O2_CLEAN_FRACTION,
+        highPressureWarning: targetHotP > LIMITS.HIGH_PRESSURE
       },
       remainingSupplyP: topUpGas.he > 0 ? supply.heP : supply.o2P
     };
@@ -291,8 +318,8 @@ export function calculateTopUpResult(
     heFinal,
     pSettled,
     safety: {
-      o2ServiceRequired: o2Final > 0.40,
-      highPressureWarning: targetHotP > 232
+      o2ServiceRequired: o2Final > LIMITS.O2_CLEAN_FRACTION,
+      highPressureWarning: targetHotP > LIMITS.HIGH_PRESSURE
     },
     remainingSupplyP: Math.max(0, pRemaining)
   };

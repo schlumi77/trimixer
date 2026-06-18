@@ -55,6 +55,36 @@ describe('Gas Physics Engine (Van der Waals)', () => {
       expect(result.validationErrors).toContain('O2 + He cannot exceed 100%');
     });
 
+    it('rejects negative gas fractions', () => {
+      const current = { o2: 0.21, he: 0, p: 0, v: 12 };
+      const target = { o2: -0.1, he: 0, p: 200, v: 12 };
+      const result = calculateBlending(current, target, supply, temp, 'HeFirst');
+      expect(result.validationErrors).toContain('Gas fractions cannot be negative');
+      expect(result.steps).toHaveLength(0);
+    });
+
+    it('rejects non-positive target pressure', () => {
+      const current = { o2: 0.21, he: 0, p: 0, v: 12 };
+      expect(calculateBlending(current, { o2: 0.21, he: 0, p: 0, v: 12 }, supply, temp, 'HeFirst').validationErrors)
+        .toContain('Target pressure must be greater than 0 bar');
+      expect(calculateBlending(current, { o2: 0.21, he: 0, p: -50, v: 12 }, supply, temp, 'HeFirst').validationErrors)
+        .toContain('Target pressure must be greater than 0 bar');
+    });
+
+    it('rejects negative current pressure', () => {
+      const current = { o2: 0.21, he: 0, p: -10, v: 12 };
+      const target = { o2: 0.21, he: 0, p: 200, v: 12 };
+      expect(calculateBlending(current, target, supply, temp, 'HeFirst').validationErrors)
+        .toContain('Current pressure cannot be negative');
+    });
+
+    it('rejects non-positive cylinder volume', () => {
+      const current = { o2: 0.21, he: 0, p: 0, v: 0 };
+      const target = { o2: 0.21, he: 0, p: 200, v: 0 };
+      expect(calculateBlending(current, target, supply, temp, 'HeFirst').validationErrors)
+        .toContain('Cylinder volume must be greater than 0 L');
+    });
+
     it('validates temperature bounds', () => {
       const current = { o2: 0.21, he: 0, p: 0, v: 12 };
       const target = { o2: 0.21, he: 0, p: 200, v: 12 };
