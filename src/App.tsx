@@ -1,7 +1,58 @@
 import { useState, useMemo, useEffect } from 'react';
 import { calculateBlending, calculateTopUpResult, LIMITS } from './logic/calculations';
 import type { GasMix, SupplyConfig, BlendingSteps, Step } from './logic/calculations';
+import { APP_VERSION } from './version';
 import './App.css';
+
+const FEATURES: { icon: string; title: string; text: string }[] = [
+  { icon: '🧪', title: 'Van der Waals accuracy', text: 'Real-gas equation of state for precise partial pressures at 200–300 bar, where the ideal gas law drifts off.' },
+  { icon: '📋', title: 'Blending Plan', text: 'Step-by-step Helium, Oxygen and Air fills to reach a target mix from your current cylinder contents.' },
+  { icon: '➕', title: 'Top-up Simulator', text: 'Predict the final mix and settled pressure when adding a given gas to an existing cylinder.' },
+  { icon: '🔀', title: 'Fill order', text: 'Switch between He → O2 → Air and O2 → He → Air sequences to match your filling station.' },
+  { icon: '⬇️', title: 'Bleed detection', text: 'Detects when the current contents make the target impossible and calculates the bleed-down pressure.' },
+  { icon: '🌡️', title: 'Temperature compensation', text: 'Account for ambient storage temperature and heat of compression during the fill (hot gauge pressure).' },
+  { icon: '⚠️', title: 'Safety checks', text: `Flags O2-clean service above ${Math.round(LIMITS.O2_CLEAN_FRACTION * 100)}% O2 and high-pressure fills above ${LIMITS.HIGH_PRESSURE} bar.` },
+  { icon: '📱', title: 'Offline PWA', text: 'Install to your home screen and use it without a connection at the dive site or fill station.' },
+];
+
+const InfoModal = ({ onClose }: { onClose: () => void }) => (
+  <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="info-title" onClick={onClose}>
+    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h2 id="info-title">About Trimixer</h2>
+        <button className="modal-close" onClick={onClose} aria-label="Close">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <p className="modal-intro">
+        A gas blending calculator for technical divers, using the Van der Waals equation of state for
+        accurate Nitrox and Trimix planning.
+      </p>
+
+      <ul className="feature-list">
+        {FEATURES.map((f) => (
+          <li key={f.title} className="feature-item">
+            <span className="feature-icon" aria-hidden="true">{f.icon}</span>
+            <div>
+              <strong>{f.title}</strong>
+              <p>{f.text}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="modal-safety">
+        ⚠️ Gas blending is dangerous. Always analyze your final mix with a calibrated O2/He analyzer
+        before diving. Never rely solely on software for life-critical calculations.
+      </div>
+
+      <div className="modal-version">Version {APP_VERSION}</div>
+    </div>
+  </div>
+);
 
 const MixingChart = ({ initialMix, steps }: { initialMix: { o2: number, he: number }, steps: Step[] }) => {
   const chartWidth = 400;
@@ -81,6 +132,7 @@ function App() {
   };
 
   const [mode, setMode] = useState<'plan' | 'topup'>('plan');
+  const [showInfo, setShowInfo] = useState(false);
   const [current, setCurrent] = useLocalStorage<GasMix>('trimixer-current', { o2: 0.21, he: 0, p: 0, v: 12 });
   const [target, setTarget] = useLocalStorage<GasMix>('trimixer-target', { o2: 0.21, he: 0, p: 200, v: 12 });
   const [supply, setSupply] = useLocalStorage<SupplyConfig>('trimixer-supply', { o2P: 300, heP: 300, v: 50 });
@@ -88,6 +140,13 @@ function App() {
   const [fillTempDelta, setFillTempDelta] = useLocalStorage<number>('trimixer-fill-temp-delta', 0);
   const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', 'HeFirst');
   const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pFinal: 200 });
+
+  useEffect(() => {
+    if (!showInfo) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowInfo(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showInfo]);
 
   const steps: BlendingSteps = useMemo(() => {
     try {
@@ -180,6 +239,13 @@ function App() {
     <div className="app-container">
       <header>
         <div className="header-top">
+          <button className="reset-button" onClick={() => setShowInfo(true)} title="About Trimixer" aria-label="About Trimixer">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5" strokeLinecap="round" />
+              <path d="M12 7.5h.01" strokeLinecap="round" />
+            </svg>
+          </button>
           <h1>Trimixer</h1>
           <button className="reset-button" onClick={resetInputs} title="Reset all inputs">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
@@ -383,8 +449,10 @@ function App() {
       </main>
 
       <footer>
-        <p>Warning: Gas blending is dangerous. Always analyze and double check. (Version 1.2)</p>
+        <p>Warning: Gas blending is dangerous. Always analyze and double check. (Version {APP_VERSION})</p>
       </footer>
+
+      {showInfo && <InfoModal onClose={() => setShowInfo(false)} />}
     </div>
   );
 }
