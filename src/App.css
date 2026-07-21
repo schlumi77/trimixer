@@ -407,6 +407,17 @@ input:focus, .select-input:focus {
   color: #fff;
 }
 
+.confirm-bleed-button {
+  margin-top: 12px;
+  padding: 10px 20px;
+  background: var(--warning-color);
+  color: #1e293b;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 footer {
   margin-top: 48px;
   text-align: center;
