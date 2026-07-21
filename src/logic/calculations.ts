@@ -8,7 +8,8 @@ export interface GasMix {
 export interface SupplyConfig {
   o2P: number;
   heP: number;
-  v: number;
+  o2V: number;
+  heV: number;
 }
 
 export interface Step {
@@ -212,9 +213,10 @@ export function calculateBlending(
     
     let supplyLeft = 0;
     if (gas === 'He' || gas === 'O2') {
-      const nSupplyInitial = getMolesAtT(gas === 'He' ? supply.heP : supply.o2P, supply.v, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
+      const supplyV = gas === 'He' ? supply.heV : supply.o2V;
+      const nSupplyInitial = getMolesAtT(gas === 'He' ? supply.heP : supply.o2P, supplyV, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
       const nSupplyFinal = nSupplyInitial - nToAdd;
-      supplyLeft = getGaugePressureAtT(nSupplyFinal, supply.v, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
+      supplyLeft = getGaugePressureAtT(nSupplyFinal, supplyV, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
     }
 
     steps.push({
@@ -241,16 +243,16 @@ export function calculateBlending(
   }
   addStep('Air', nAirToAdd);
 
-  const nHeInitialSupply = getMolesAtT(supply.heP, supply.v, 0, 1.0, T);
-  const nO2InitialSupply = getMolesAtT(supply.o2P, supply.v, 1.0, 0, T);
-  
+  const nHeInitialSupply = getMolesAtT(supply.heP, supply.heV, 0, 1.0, T);
+  const nO2InitialSupply = getMolesAtT(supply.o2P, supply.o2V, 1.0, 0, T);
+
   return {
     steps,
     warnings,
     validationErrors: [],
     safety,
-    remainingHeP: Math.max(0, getGaugePressureAtT(nHeInitialSupply - nHeToAdd, supply.v, 0, 1.0, T)),
-    remainingO2P: Math.max(0, getGaugePressureAtT(nO2InitialSupply - nO2ToAdd, supply.v, 1.0, 0, T))
+    remainingHeP: Math.max(0, getGaugePressureAtT(nHeInitialSupply - nHeToAdd, supply.heV, 0, 1.0, T)),
+    remainingO2P: Math.max(0, getGaugePressureAtT(nO2InitialSupply - nO2ToAdd, supply.o2V, 1.0, 0, T))
   };
 }
 
@@ -307,10 +309,11 @@ export function calculateTopUpResult(
   // Remaining supply
   const isHeSupply = topUpGas.he > 0;
   const initialP = isHeSupply ? supply.heP : supply.o2P;
+  const supplyV = isHeSupply ? supply.heV : supply.o2V;
   const supplyMix = isHeSupply ? { o2: 0, he: 1.0 } : { o2: topUpGas.o2, he: topUpGas.he }; // Simple assumption
-  const nSupplyInitial = getMolesAtT(initialP, supply.v, supplyMix.o2, supplyMix.he, T);
+  const nSupplyInitial = getMolesAtT(initialP, supplyV, supplyMix.o2, supplyMix.he, T);
   const nSupplyFinal = nSupplyInitial - nAdded;
-  const pRemaining = getGaugePressureAtT(nSupplyFinal, supply.v, supplyMix.o2, supplyMix.he, T);
+  const pRemaining = getGaugePressureAtT(nSupplyFinal, supplyV, supplyMix.o2, supplyMix.he, T);
 
   return { 
     pFinal: targetHotP, 
