@@ -233,6 +233,12 @@ function App() {
     );
   };
 
+  // Bleeding removes gas proportionally, so the mix is unchanged — only the
+  // current cylinder pressure drops to the calculated bleed-down value.
+  const confirmBleed = (bleedP: number) => {
+    setCurrent(prev => ({ ...prev, p: bleedP }));
+  };
+
   const resetInputs = () => {
     if (confirm('Reset all values to default?')) {
       setCurrent({ o2: 0.21, he: 0, p: 0, v: 12 });
@@ -377,6 +383,9 @@ function App() {
                     <h3>Bleed Required</h3>
                     <p>Cylinder contains too much Oxygen or Helium.</p>
                     <p>Bleed down to <strong>{steps.bleedRequired.toFixed(0)} bar</strong> before starting.</p>
+                    <button className="confirm-bleed-button" onClick={() => confirmBleed(steps.bleedRequired!)}>
+                      Confirm bleed done ({steps.bleedRequired.toFixed(0)} bar)
+                    </button>
                   </div>
                 </div>
               ) : (
