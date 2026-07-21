@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateBlending, calculateTopUpResult } from './calculations';
 
 describe('Gas Physics Engine (Van der Waals)', () => {
-  const supply = { o2P: 300, heP: 300, v: 50 };
+  const supply = { o2P: 300, heP: 300, o2V: 50, heV: 50 };
   const temp = 20;
 
   describe('calculateBlending', () => {
@@ -103,7 +103,7 @@ describe('Gas Physics Engine (Van der Waals)', () => {
     it('warns when supply pressure is exceeded', () => {
       const current = { o2: 0.21, he: 0, p: 0, v: 12 };
       const target = { o2: 0.21, he: 0.50, p: 200, v: 12 }; // Tx 21/50
-      const lowSupply = { o2P: 300, heP: 50, v: 50 }; // Low He supply
+      const lowSupply = { o2P: 300, heP: 50, o2V: 50, heV: 50 }; // Low He supply
       const result = calculateBlending(current, target, lowSupply, temp, 'HeFirst');
       expect(result.warnings.some(w => w.includes('Helium step exceeds supply pressure'))).toBe(true);
     });
@@ -111,7 +111,7 @@ describe('Gas Physics Engine (Van der Waals)', () => {
     it('warns when O2 supply pressure is exceeded', () => {
       const current = { o2: 0.21, he: 0, p: 0, v: 12 };
       const target = { o2: 0.40, he: 0, p: 200, v: 12 }; // 40% O2 to 200 bar
-      const lowSupply = { o2P: 10, heP: 300, v: 50 }; // O2 supply only 10 bar
+      const lowSupply = { o2P: 10, heP: 300, o2V: 50, heV: 50 }; // O2 supply only 10 bar
       const result = calculateBlending(current, target, lowSupply, temp, 'O2First');
       expect(result.warnings.some(w => w.includes('Oxygen step exceeds supply pressure'))).toBe(true);
     });

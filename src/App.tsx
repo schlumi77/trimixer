@@ -135,11 +135,20 @@ function App() {
   const [showInfo, setShowInfo] = useState(false);
   const [current, setCurrent] = useLocalStorage<GasMix>('trimixer-current', { o2: 0.21, he: 0, p: 0, v: 12 });
   const [target, setTarget] = useLocalStorage<GasMix>('trimixer-target', { o2: 0.21, he: 0, p: 200, v: 12 });
-  const [supply, setSupply] = useLocalStorage<SupplyConfig>('trimixer-supply', { o2P: 300, heP: 300, v: 50 });
+  const [supply, setSupply] = useLocalStorage<SupplyConfig>('trimixer-supply', { o2P: 300, heP: 300, o2V: 50, heV: 50 });
   const [temp, setTemp] = useLocalStorage<number>('trimixer-temp', 20);
   const [fillTempDelta, setFillTempDelta] = useLocalStorage<number>('trimixer-fill-temp-delta', 0);
   const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', 'HeFirst');
   const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pFinal: 200 });
+
+  // Migrate legacy supply config that used a single shared bottle volume `v`.
+  useEffect(() => {
+    const legacy = supply as SupplyConfig & { v?: number };
+    if (legacy.v !== undefined && (legacy.o2V === undefined || legacy.heV === undefined)) {
+      setSupply({ o2P: legacy.o2P, heP: legacy.heP, o2V: legacy.o2V ?? legacy.v, heV: legacy.heV ?? legacy.v });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!showInfo) return;
@@ -228,7 +237,7 @@ function App() {
     if (confirm('Reset all values to default?')) {
       setCurrent({ o2: 0.21, he: 0, p: 0, v: 12 });
       setTarget({ o2: 0.21, he: 0, p: 200, v: 12 });
-      setSupply({ o2P: 300, heP: 300, v: 50 });
+      setSupply({ o2P: 300, heP: 300, o2V: 50, heV: 50 });
       setTemp(20);
       setFillTempDelta(0);
       setOrder('HeFirst');
@@ -308,12 +317,16 @@ function App() {
             <div>
               <h3>Supply Cylinders</h3>
               <div className="input-group">
-                <label htmlFor="sup-v">Bottle Size (L)</label>
-                <input id="sup-v" type="number" inputMode="decimal" min="0" value={formatInput(supply.v)} placeholder="50" onChange={(e) => handleInputChange('supply', 'v', e.target.value)} />
+                <label htmlFor="sup-o2v">O2 Supply Size (L)</label>
+                <input id="sup-o2v" type="number" inputMode="decimal" min="0" value={formatInput(supply.o2V)} placeholder="50" onChange={(e) => handleInputChange('supply', 'o2V', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="sup-o2p">O2 Supply P (bar)</label>
                 <input id="sup-o2p" type="number" inputMode="decimal" min="0" value={formatInput(supply.o2P)} placeholder="300" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label htmlFor="sup-hev">He Supply Size (L)</label>
+                <input id="sup-hev" type="number" inputMode="decimal" min="0" value={formatInput(supply.heV)} placeholder="50" onChange={(e) => handleInputChange('supply', 'heV', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="sup-hep">He Supply P (bar)</label>
@@ -389,7 +402,7 @@ function App() {
 
                   {steps.steps.length > 0 && (
                     <div className="summary-banner">
-                      <h3>Supply Summary ({formatInput(supply.v) || '0'}L)</h3>
+                      <h3>Supply Summary (O2 {formatInput(supply.o2V) || '0'}L / He {formatInput(supply.heV) || '0'}L)</h3>
                       <div className="grid">
                         <div>
                           <p className="subtext">Remaining Helium</p>
