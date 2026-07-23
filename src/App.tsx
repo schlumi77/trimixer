@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { calculateBlending, calculateTopUpResult, LIMITS } from './logic/calculations';
+import { calculateBlending, calculateTopUpResult, calculateMixMetrics, LIMITS, PPO2_MAX_OPTIONS, DENSITY_LIMIT } from './logic/calculations';
 import type { GasMix, SupplyConfig, BlendingSteps, Step } from './logic/calculations';
 import { APP_VERSION } from './version';
 import './App.css';
@@ -139,6 +139,7 @@ function App() {
   const [temp, setTemp] = useLocalStorage<number>('trimixer-temp', 20);
   const [fillTempDelta, setFillTempDelta] = useLocalStorage<number>('trimixer-fill-temp-delta', 0);
   const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', 'HeFirst');
+  const [ppO2Max, setPpO2Max] = useLocalStorage<number>('trimixer-ppo2max', 1.2);
   const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pFinal: 200 });
 
   // Migrate legacy supply config that used a single shared bottle volume `v`.
@@ -176,6 +177,10 @@ function App() {
   const topUpResult = useMemo(() => {
     return calculateTopUpResult(current, topUpGas, supply, temp, fillTempDelta);
   }, [current, topUpGas, supply, temp, fillTempDelta]);
+
+  const targetMetrics = useMemo(() => {
+    return calculateMixMetrics(target.o2, target.he, ppO2Max, temp);
+  }, [target.o2, target.he, ppO2Max, temp]);
 
   const handleInputChange = (
     section: 'current' | 'target' | 'supply' | 'config' | 'topup',
@@ -367,6 +372,28 @@ function App() {
                 <label htmlFor="tgt-he">Final He (%)</label>
                 <input id="tgt-he" type="number" inputMode="decimal" min="0" max="100" value={formatInput(target.he, true)} placeholder="0" onChange={(e) => handleInputChange('target', 'he', e.target.value)} />
               </div>
+              <div className="input-group">
+                <label htmlFor="tgt-ppo2">Max ppO2 (bar)</label>
+                <select id="tgt-ppo2" className="select-input" value={ppO2Max} onChange={(e) => setPpO2Max(parseFloat(e.target.value))}>
+                  {PPO2_MAX_OPTIONS.map(v => <option key={v} value={v}>{v.toFixed(1)}</option>)}
+                </select>
+              </div>
+              <div className="mod-metrics">
+                <div className="metric">
+                  <span className="metric-label">MOD</span>
+                  <span className="metric-value">{Number.isFinite(targetMetrics.mod) ? `${targetMetrics.mod.toFixed(0)} m` : '—'}</span>
+                </div>
+                <div className={`metric${targetMetrics.densityWarning ? ' metric-warn' : ''}`}>
+                  <span className="metric-label">Density @ MOD</span>
+                  <span className="metric-value">{Number.isFinite(targetMetrics.density) ? `${targetMetrics.density.toFixed(1)} g/L` : '—'}</span>
+                </div>
+              </div>
+              {targetMetrics.densityWarning && Number.isFinite(targetMetrics.density) && (
+                <div className="warning-banner">
+                  ⚠️ Gas density {targetMetrics.density.toFixed(1)} g/L exceeds the recommended {DENSITY_LIMIT.RECOMMENDED_MAX} g/L limit
+                  {targetMetrics.densityCritical ? ` (above the ${DENSITY_LIMIT.ABSOLUTE_MAX} g/L absolute maximum)` : ''}.
+                </div>
+              )}
             </section>
 
 

@@ -46,6 +46,18 @@ const CONSTANTS = {
   P_ATM: 1.01325,
 };
 
+/** Selectable maximum oxygen partial pressures for the MOD calculation (bar). */
+export const PPO2_MAX_OPTIONS = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6];
+
+/** Breathing-gas density limits (g/L): recommended working max and absolute max. */
+export const DENSITY_LIMIT = {
+  RECOMMENDED_MAX: 5.2,
+  ABSOLUTE_MAX: 6.2,
+};
+
+/** Molar masses of the component gases (g/mol). */
+const MOLAR_MASS = { o2: 31.9988, he: 4.0026, n2: 28.0134 };
+
 /** Operational and safety limits used for validation and warnings. */
 export const LIMITS = {
   /** Maximum target fill pressure accepted (bar, gauge). */
@@ -325,5 +337,49 @@ export function calculateTopUpResult(
       highPressureWarning: targetHotP > LIMITS.HIGH_PRESSURE
     },
     remainingSupplyP: Math.max(0, pRemaining)
+  };
+}
+
+export interface MixMetrics {
+  /** Maximum operating depth (metres of seawater). */
+  mod: number;
+  /** Absolute ambient pressure at the MOD (bar). */
+  pAbsAtMod: number;
+  /** Breathing-gas density at the MOD (g/L). */
+  density: number;
+  /** True when density exceeds the recommended working limit. */
+  densityWarning: boolean;
+  /** True when density exceeds the absolute limit. */
+  densityCritical: boolean;
+}
+
+/**
+ * Maximum operating depth and breathing-gas density for a mix.
+ *
+ * MOD uses the diving convention of 10 m per bar with a 1 bar surface, so the
+ * absolute pressure at the MOD equals ppO2Max / FO2. Gas density at that depth
+ * is derived from the ideal gas law at temperature `tempC` — the basis on which
+ * the 5.2 g/L working and 6.2 g/L absolute density limits are defined.
+ */
+export function calculateMixMetrics(o2: number, he: number, ppO2Max: number, tempC: number): MixMetrics {
+  const T = tempC + 273.15;
+  const n2 = Math.max(0, 1 - o2 - he);
+  const mMix = o2 * MOLAR_MASS.o2 + he * MOLAR_MASS.he + n2 * MOLAR_MASS.n2;
+
+  // A mix with no oxygen has no finite MOD.
+  if (o2 <= 0) {
+    return { mod: Infinity, pAbsAtMod: Infinity, density: Infinity, densityWarning: true, densityCritical: true };
+  }
+
+  const pAbsAtMod = ppO2Max / o2;
+  const mod = Math.max(0, (pAbsAtMod - 1) * 10);
+  const density = (mMix * pAbsAtMod) / (CONSTANTS.R * T);
+
+  return {
+    mod,
+    pAbsAtMod,
+    density,
+    densityWarning: density > DENSITY_LIMIT.RECOMMENDED_MAX,
+    densityCritical: density > DENSITY_LIMIT.ABSOLUTE_MAX,
   };
 }
