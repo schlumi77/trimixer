@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateBlending, calculateTopUpResult } from './calculations';
+import { calculateBlending, calculateTopUpResult, calculateMixMetrics } from './calculations';
 
 describe('Gas Physics Engine (Van der Waals)', () => {
   const supply = { o2P: 300, heP: 300, o2V: 50, heV: 50 };
@@ -153,6 +153,41 @@ describe('Gas Physics Engine (Van der Waals)', () => {
       const result = calculateTopUpResult(current, topUpGas, supply, temp);
       expect(result.heFinal).toBeGreaterThan(0.3);
       expect(result.o2Final).toBeLessThan(0.21);
+    });
+  });
+
+  describe('calculateMixMetrics', () => {
+    it('calculates MOD from ppO2 and O2 fraction', () => {
+      // Air (21% O2) at ppO2 1.4: MOD = 10 * (1.4/0.21 - 1)
+      const m = calculateMixMetrics(0.21, 0, 1.4, temp);
+      expect(m.mod).toBeCloseTo(56.7, 1);
+    });
+
+    it('uses the selected ppO2 max', () => {
+      const at12 = calculateMixMetrics(0.21, 0, 1.2, temp);
+      const at16 = calculateMixMetrics(0.21, 0, 1.6, temp);
+      // Higher ppO2 allowance means a deeper MOD.
+      expect(at16.mod).toBeGreaterThan(at12.mod);
+      expect(at12.mod).toBeCloseTo(47.1, 1);
+    });
+
+    it('flags high gas density above the recommended 5.2 g/L limit', () => {
+      // Air at ppO2 1.2 -> ~47 m, dense enough to exceed 5.2 g/L.
+      const dense = calculateMixMetrics(0.21, 0, 1.2, temp);
+      expect(dense.density).toBeGreaterThan(5.2);
+      expect(dense.densityWarning).toBe(true);
+    });
+
+    it('keeps a helium-rich mix below the density limit at its MOD', () => {
+      // Trimix 18/45 has low molar mass thanks to helium.
+      const trimix = calculateMixMetrics(0.18, 0.45, 1.2, temp);
+      expect(trimix.density).toBeLessThan(5.2);
+      expect(trimix.densityWarning).toBe(false);
+    });
+
+    it('marks a zero-oxygen mix as having no finite MOD', () => {
+      const m = calculateMixMetrics(0, 0.5, 1.2, temp);
+      expect(Number.isFinite(m.mod)).toBe(false);
     });
   });
 });
