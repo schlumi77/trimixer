@@ -9,7 +9,9 @@ Trimixer is a specialized gas blending calculator for technical divers. It uses 
   - **Blending Plan**: Calculate the exact amount of Helium and Oxygen needed to reach a target mix from your current cylinder contents.
   - **Top-up Simulator**: Predict the final mix when adding a specific gas to an existing cylinder.
 - **Fill Order Optimization**: Choose between `He → O2 → Air` or `O2 → He → Air` sequences.
-- **Bleed Calculations**: Automatically detects if the current cylinder content makes the target mix impossible and calculates the required bleed-down pressure.
+- **Independent Supply Cylinders**: Configure separate sizes and pressures for the O2 and He supply bottles.
+- **Bleed Calculations**: Automatically detects if the current cylinder content makes the target mix impossible and calculates the required bleed-down pressure. A **Confirm bleed done** button then updates the current cylinder pressure in one tap so the plan continues.
+- **MOD & Gas Density**: For the target mix, calculates the Maximum Operating Depth from a selectable maximum ppO2 (1.0–1.6 bar) and the breathing-gas density at that depth, warning when density exceeds the recommended 5.2 g/L (and flagging the 6.2 g/L absolute maximum).
 - **Temperature Compensation**: Adjust calculations based on the working temperature.
 - **Common Presets**: Quick access to standard mixes (Air, EAN32, EAN50, Tx 21/35, Tx 18/45, etc.).
 - **PWA Ready**: Can be installed on mobile devices for offline use at the dive site or filling station.
@@ -40,7 +42,12 @@ Trimixer is a specialized gas blending calculator for technical divers. It uses 
    npm run dev
    ```
 
-4. **Build for production**:
+4. **Run the test suite**:
+   ```bash
+   npm test
+   ```
+
+5. **Build for production**:
    ```bash
    npm run build
    ```
@@ -57,4 +64,4 @@ Handling high-pressure oxygen and mixing breathing gases requires specialized tr
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details (or add one).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
