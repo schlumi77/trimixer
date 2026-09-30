@@ -7,8 +7,10 @@ Trimixer is a professional-grade, reactive web application designed for technica
 - **Key Features:**
   - **Van der Waals Equation of State:** High-accuracy calculations accounting for gas compressibility at pressures up to 300 bar.
   - **Temperature Compensation:** Real-time adjustments based on ambient blending temperature.
-  - **Bleed-Down Intelligence:** Automatically calculates the required pressure to bleed an existing cylinder to reach a target mix.
+  - **Bleed-Down Intelligence:** Automatically calculates the required pressure to bleed an existing cylinder to reach a target mix, with a one-tap confirmation that updates the current cylinder pressure to the bleed-down value.
   - **Top-up Simulator:** Predicts the resulting mixture when adding a specific pressure of gas to an existing cylinder.
+  - **Independent Supply Cylinders:** Separate size and pressure inputs for the O2 and He supply bottles.
+  - **MOD & Gas Density:** Derives the Maximum Operating Depth from a selectable maximum ppO2 (1.0–1.6 bar) and the breathing-gas density at that depth, warning above the recommended 5.2 g/L working limit and the 6.2 g/L absolute maximum.
   - **PWA Support:** Works completely offline on mobile devices (iPhone/Android) when added to the home screen.
 
 ## Technologies
@@ -22,6 +24,7 @@ The application moves beyond the Ideal Gas Law to handle the complexities of hig
 - **Constants Used:** Specific $a$ (attraction) and $b$ (volume) constants for He, O2, and N2.
 - **Atmospheric Offset:** All user inputs are treated as **Gauge Pressure** (matching SPGs), while internal math uses **Absolute Pressure** (adding 1.013 bar) to account for residual air in "empty" tanks.
 - **Mixing Rules:** Uses quadratic mixing for the $a$ parameter and linear mixing for $b$.
+- **MOD & Gas Density:** The Maximum Operating Depth uses the diving convention of 10 m per bar with a 1 bar surface, so the absolute pressure at the MOD is `ppO2Max / FO2`. Breathing-gas density at that depth is derived from the ideal gas law (mix molar mass × absolute pressure / RT) at the configured temperature — the basis on which the 5.2 g/L working and 6.2 g/L absolute density limits are defined.
 
 ## Mobile & Offline Use
 Trimixer is optimized for use at remote dive sites:
@@ -31,6 +34,7 @@ Trimixer is optimized for use at remote dive sites:
 
 ## Building and Running
 - **Development:** `npm run dev -- --host`
+- **Test:** `npm test` (Vitest unit tests for the physics engine)
 - **Build:** `npm run build`
 - **Preview:** `npm run preview`
 
