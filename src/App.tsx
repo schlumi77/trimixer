@@ -285,7 +285,7 @@ function App() {
           <div className="grid">
             <div className="input-group">
               <label htmlFor="cfg-temp">Storage Temp (°C)</label>
-              <input id="cfg-temp" type="number" inputMode="decimal" min={LIMITS.TEMP_MIN} max={LIMITS.TEMP_MAX} value={formatInput(temp)} placeholder="20" onChange={(e) => handleInputChange('config', 'temp', e.target.value)} />
+              <input id="cfg-temp" type="number" inputMode="decimal" min={LIMITS.TEMP_MIN} max={LIMITS.TEMP_MAX} value={formatInput(temp)} placeholder="0" onChange={(e) => handleInputChange('config', 'temp', e.target.value)} />
             </div>
             <div className="input-group">
               <label htmlFor="cfg-fill-delta">Fill Temp Increase (Δ°C)</label>
@@ -310,7 +310,7 @@ function App() {
               <h3>Target Cylinder</h3>
               <div className="input-group">
                 <label htmlFor="cur-v">Size (L)</label>
-                <input id="cur-v" type="number" inputMode="decimal" min="0" value={formatInput(current.v)} placeholder="12" onChange={(e) => handleInputChange('current', 'v', e.target.value)} />
+                <input id="cur-v" type="number" inputMode="decimal" min="0" value={formatInput(current.v)} placeholder="0" onChange={(e) => handleInputChange('current', 'v', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="cur-p">Initial P (bar)</label>
@@ -318,7 +318,7 @@ function App() {
               </div>
               <div className="input-group">
                 <label htmlFor="cur-o2">Initial O2 (%)</label>
-                <input id="cur-o2" type="number" inputMode="decimal" min="0" max="100" value={formatInput(current.o2, true)} placeholder="21" onChange={(e) => handleInputChange('current', 'o2', e.target.value)} />
+                <input id="cur-o2" type="number" inputMode="decimal" min="0" max="100" value={formatInput(current.o2, true)} placeholder="0" onChange={(e) => handleInputChange('current', 'o2', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="cur-he">Initial He (%)</label>
@@ -329,19 +329,19 @@ function App() {
               <h3>Supply Cylinders</h3>
               <div className="input-group">
                 <label htmlFor="sup-o2v">O2 Supply Size (L)</label>
-                <input id="sup-o2v" type="number" inputMode="decimal" min="0" value={formatInput(supply.o2V)} placeholder="50" onChange={(e) => handleInputChange('supply', 'o2V', e.target.value)} />
+                <input id="sup-o2v" type="number" inputMode="decimal" min="0" value={formatInput(supply.o2V)} placeholder="0" onChange={(e) => handleInputChange('supply', 'o2V', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="sup-o2p">O2 Supply P (bar)</label>
-                <input id="sup-o2p" type="number" inputMode="decimal" min="0" value={formatInput(supply.o2P)} placeholder="300" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
+                <input id="sup-o2p" type="number" inputMode="decimal" min="0" value={formatInput(supply.o2P)} placeholder="0" onChange={(e) => handleInputChange('supply', 'o2P', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="sup-hev">He Supply Size (L)</label>
-                <input id="sup-hev" type="number" inputMode="decimal" min="0" value={formatInput(supply.heV)} placeholder="50" onChange={(e) => handleInputChange('supply', 'heV', e.target.value)} />
+                <input id="sup-hev" type="number" inputMode="decimal" min="0" value={formatInput(supply.heV)} placeholder="0" onChange={(e) => handleInputChange('supply', 'heV', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="sup-hep">He Supply P (bar)</label>
-                <input id="sup-hep" type="number" inputMode="decimal" min="0" value={formatInput(supply.heP)} placeholder="300" onChange={(e) => handleInputChange('supply', 'heP', e.target.value)} />
+                <input id="sup-hep" type="number" inputMode="decimal" min="0" value={formatInput(supply.heP)} placeholder="0" onChange={(e) => handleInputChange('supply', 'heP', e.target.value)} />
               </div>
             </div>
           </div>
@@ -362,11 +362,11 @@ function App() {
               </div>
               <div className="input-group">
                 <label htmlFor="tgt-p">Final P (bar)</label>
-                <input id="tgt-p" type="number" inputMode="decimal" min="0" max={LIMITS.MAX_PRESSURE} value={formatInput(target.p)} placeholder="200" onChange={(e) => handleInputChange('target', 'p', e.target.value)} />
+                <input id="tgt-p" type="number" inputMode="decimal" min="0" max={LIMITS.MAX_PRESSURE} value={formatInput(target.p)} placeholder="0" onChange={(e) => handleInputChange('target', 'p', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="tgt-o2">Final O2 (%)</label>
-                <input id="tgt-o2" type="number" inputMode="decimal" min="0" max="100" value={formatInput(target.o2, true)} placeholder="21" onChange={(e) => handleInputChange('target', 'o2', e.target.value)} />
+                <input id="tgt-o2" type="number" inputMode="decimal" min="0" max="100" value={formatInput(target.o2, true)} placeholder="0" onChange={(e) => handleInputChange('target', 'o2', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="tgt-he">Final He (%)</label>
@@ -470,11 +470,11 @@ function App() {
               </div>
               <div className="input-group">
                 <label htmlFor="tu-pfinal">Final pressure (bar)</label>
-                <input id="tu-pfinal" type="number" inputMode="decimal" min="0" max={LIMITS.MAX_PRESSURE} value={formatInput(topUpGas.pFinal)} placeholder="200" onChange={(e) => handleInputChange('topup', 'pFinal', e.target.value)} />
+                <input id="tu-pfinal" type="number" inputMode="decimal" min="0" max={LIMITS.MAX_PRESSURE} value={formatInput(topUpGas.pFinal)} placeholder="0" onChange={(e) => handleInputChange('topup', 'pFinal', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="tu-o2">O2 of Top-up (%)</label>
-                <input id="tu-o2" type="number" inputMode="decimal" min="0" max="100" value={formatInput(topUpGas.o2, true)} placeholder="21" onChange={(e) => handleInputChange('topup', 'o2', e.target.value)} />
+                <input id="tu-o2" type="number" inputMode="decimal" min="0" max="100" value={formatInput(topUpGas.o2, true)} placeholder="0" onChange={(e) => handleInputChange('topup', 'o2', e.target.value)} />
               </div>
               <div className="input-group">
                 <label htmlFor="tu-he">He of Top-up (%)</label>
@@ -484,14 +484,22 @@ function App() {
 
             <section className="results-card highlight">
               <h2>Simulation Result</h2>
-              {renderSafetyBadges(topUpResult.safety)}
-              <div className="summary-banner large">
-                <p>Final Pressure: <strong>{topUpResult.pFinal.toFixed(1)} bar</strong></p>
-                <p>Final Mix: <strong className="mix-accent">{Math.round(topUpResult.o2Final * 100)}/{Math.round(topUpResult.heFinal * 100)}</strong></p>
-                <p className="subtext">Settled (Cooled): {topUpResult.pSettled.toFixed(1)} bar</p>
-                <p className="subtext">Remaining Supply: <strong>{topUpResult.remainingSupplyP.toFixed(1)} bar</strong></p>
-                <p className="subtext small">Van der Waals calculated at {temp}°C</p>
-              </div>
+              {topUpResult.validationErrors.map((err, i) => <div key={i} className="error-banner">❌ {err}</div>)}
+              {topUpResult.validationErrors.length === 0 && (
+                <>
+                  {renderSafetyBadges(topUpResult.safety)}
+                  {topUpResult.warnings.map((w, i) => <div key={i} className="warning-banner">⚠️ {w}</div>)}
+                  <div className="summary-banner large">
+                    <p>Final Pressure: <strong>{topUpResult.pFinal.toFixed(1)} bar</strong></p>
+                    <p>Final Mix: <strong className="mix-accent">{Math.round(topUpResult.o2Final * 100)}/{Math.round(topUpResult.heFinal * 100)}</strong></p>
+                    <p className="subtext">Settled (Cooled): {topUpResult.pSettled.toFixed(1)} bar</p>
+                    {topUpResult.supplyGas && topUpResult.remainingSupplyP !== null && (
+                      <p className="subtext">Remaining {topUpResult.supplyGas} Supply: <strong>{topUpResult.remainingSupplyP.toFixed(1)} bar</strong></p>
+                    )}
+                    <p className="subtext small">Van der Waals calculated at {temp}°C</p>
+                  </div>
+                </>
+              )}
             </section>
           </>
         )}
