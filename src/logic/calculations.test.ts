@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateBlending, calculateTopUpResult, calculateMixMetrics } from './calculations';
+import { calculateBlending, calculateTopUpResult, calculateMixMetrics, compressibilityFactor } from './calculations';
 
 describe('Gas Physics Engine (Van der Waals)', () => {
   const supply = { o2P: 300, heP: 300, o2V: 50, heV: 50 };
@@ -117,10 +117,10 @@ describe('Gas Physics Engine (Van der Waals)', () => {
     });
 
     it('warns when the supply ends below the cylinder pressure', () => {
-      // 50 L He at 150 bar starts above the ~98 bar needed, but decanting pulls it below.
+      // 50 L He at 140 bar starts above the ~97 bar needed, but decanting pulls it below.
       const current = { o2: 0.21, he: 0, p: 0, v: 24 };
       const target = { o2: 0.18, he: 0.45, p: 230, v: 24 };
-      const result = calculateBlending(current, target, { o2P: 200, heP: 150, o2V: 50, heV: 50 }, temp, 'HeFirst');
+      const result = calculateBlending(current, target, { o2P: 200, heP: 140, o2V: 50, heV: 50 }, temp, 'HeFirst');
       const heStep = result.steps.find(s => s.gas === 'He');
       expect(heStep!.supplyRemaining).toBeLessThan(heStep!.pAfter);
       expect(result.warnings.some(w => w.includes('Helium supply drops to') && w.includes('booster required'))).toBe(true);
@@ -224,6 +224,50 @@ describe('Gas Physics Engine (Van der Waals)', () => {
     });
   });
 
+  describe('real-gas model vs NIST reference data', () => {
+    // Molar densities (mol/L) from NIST Chemistry WebBook isotherms:
+    // [temperature K, absolute pressure bar, density mol/L].
+    const NIST: Record<'N2' | 'O2' | 'He', [number, number, number][]> = {
+      N2: [
+        [273.15, 100, 4.4710], [273.15, 200, 8.5180], [273.15, 300, 11.692],
+        [293.15, 100, 4.0995], [293.15, 200, 7.8014], [293.15, 300, 10.796],
+        [313.15, 100, 3.7932], [313.15, 200, 7.2114], [313.15, 300, 10.039],
+        [333.15, 200, 6.7159], [333.15, 300, 9.3906],
+      ],
+      O2: [
+        [273.15, 100, 4.7751], [273.15, 200, 9.7448], [273.15, 300, 13.906],
+        [293.15, 100, 4.3348], [293.15, 200, 8.7379], [293.15, 300, 12.557],
+        [313.15, 100, 3.9817], [313.15, 200, 7.9524], [313.15, 300, 11.468],
+        [333.15, 200, 7.3188], [333.15, 300, 10.572],
+      ],
+      He: [
+        [273.15, 100, 4.1856], [273.15, 200, 7.9855], [273.15, 300, 11.461],
+        [293.15, 100, 3.9144], [293.15, 200, 7.4925], [293.15, 300, 10.784],
+        [313.15, 100, 3.6763], [313.15, 200, 7.0568], [313.15, 300, 10.184],
+        [333.15, 200, 6.6691], [333.15, 300, 9.6463],
+      ],
+    };
+    const FRACTIONS = { N2: [0, 0], O2: [1, 0], He: [0, 1] } as const;
+    const R = 0.0831446;
+
+    for (const gas of ['N2', 'O2', 'He'] as const) {
+      it(`matches NIST compressibility for pure ${gas} within 0.5%`, () => {
+        const [o2, he] = FRACTIONS[gas];
+        for (const [T, p, rho] of NIST[gas]) {
+          const zRef = p / (rho * R * T);
+          const z = compressibilityFactor(p, o2, he, T - 273.15);
+          expect(Math.abs(z / zRef - 1), `${gas} at ${T} K, ${p} bar`).toBeLessThan(0.005);
+        }
+      });
+    }
+
+    it('places air between its components', () => {
+      const zAir = compressibilityFactor(200, 0.21, 0, 20);
+      expect(zAir).toBeGreaterThan(compressibilityFactor(200, 1, 0, 20));
+      expect(zAir).toBeLessThan(compressibilityFactor(200, 0, 0, 20));
+    });
+  });
+
   describe('calculateMixMetrics', () => {
     it('calculates MOD from ppO2 and O2 fraction', () => {
       // Air (21% O2) at ppO2 1.4: MOD = 10 * (1.4/0.21 - 1)
@@ -251,6 +295,19 @@ describe('Gas Physics Engine (Van der Waals)', () => {
       const trimix = calculateMixMetrics(0.18, 0.45, 1.2, temp);
       expect(trimix.density).toBeLessThan(5.2);
       expect(trimix.densityWarning).toBe(false);
+    });
+
+    it('does not flag a normoxic mix as hypoxic', () => {
+      const m = calculateMixMetrics(0.21, 0.35, 1.2, temp);
+      expect(m.hypoxic).toBe(false);
+      expect(m.minDepth).toBe(0);
+    });
+
+    it('flags a hypoxic mix and gives its minimum operating depth', () => {
+      // Tx10/80 reaches ppO2 0.18 at 10 * (0.18/0.10 - 1) = 8 m.
+      const m = calculateMixMetrics(0.10, 0.80, 1.2, temp);
+      expect(m.hypoxic).toBe(true);
+      expect(m.minDepth).toBeCloseTo(8, 5);
     });
 
     it('marks a zero-oxygen mix as having no finite MOD', () => {

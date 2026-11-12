@@ -38,13 +38,25 @@ export interface BlendingSteps {
   bleedRequired?: number;
 }
 
+/**
+ * Van der Waals coefficients fitted to NIST Chemistry WebBook isotherms
+ * (-10 to 80 °C, 50 to 350 bar) rather than the textbook critical-point values,
+ * which are several percent off at cylinder pressures. The attraction term is
+ * linear in temperature: a(T) = a0 + a1 * (T - 293.15 K), in L²·bar/mol²;
+ * b is in L/mol. Pure-gas pressures match NIST within 0.7% over that range.
+ */
 const CONSTANTS = {
-  HE: { a: 0.0346, b: 0.0238 },
-  O2: { a: 1.382, b: 0.03186 },
-  N2: { a: 1.370, b: 0.0387 },
+  HE: { a0: 0, a1: 0, b: 0.01148 },
+  O2: { a0: 1.0204, a1: -0.001342, b: 0.02666 },
+  N2: { a0: 0.8894, a1: -0.001567, b: 0.03217 },
+  /** Reference temperature of the a(T) fit (K). */
+  T_REF: 293.15,
   R: 0.083144,
   P_ATM: 1.01325,
 };
+
+/** Minimum breathable oxygen partial pressure (bar); below it a mix is hypoxic. */
+export const PPO2_MIN = 0.18;
 
 /** Selectable maximum oxygen partial pressures for the MOD calculation (bar). */
 export const PPO2_MAX_OPTIONS = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6];
@@ -78,18 +90,19 @@ export const LIMITS = {
  */
 const OVERFULL_PRESSURE = 999;
 
-function getMixParams(o2: number, he: number) {
+function getMixParams(o2: number, he: number, T: number) {
   const n2 = Math.max(0, 1 - o2 - he);
+  const aAtT = (gas: { a0: number; a1: number }) => Math.max(0, gas.a0 + gas.a1 * (T - CONSTANTS.T_REF));
   const b = o2 * CONSTANTS.O2.b + he * CONSTANTS.HE.b + n2 * CONSTANTS.N2.b;
-  const a_sqrt = o2 * Math.sqrt(CONSTANTS.O2.a) + 
-                 he * Math.sqrt(CONSTANTS.HE.a) + 
-                 n2 * Math.sqrt(CONSTANTS.N2.a);
+  const a_sqrt = o2 * Math.sqrt(aAtT(CONSTANTS.O2)) +
+                 he * Math.sqrt(aAtT(CONSTANTS.HE)) +
+                 n2 * Math.sqrt(aAtT(CONSTANTS.N2));
   return { a: a_sqrt * a_sqrt, b };
 }
 
 function getGaugePressureAtT(n: number, V: number, o2: number, he: number, T: number): number {
   if (n <= 0) return -CONSTANTS.P_ATM;
-  const { a, b } = getMixParams(o2, he);
+  const { a, b } = getMixParams(o2, he, T);
   const Vm = V / n;
   if (Vm <= b) return OVERFULL_PRESSURE;
   const pAbs = (CONSTANTS.R * T) / (Vm - b) - a / (Vm * Vm);
@@ -99,7 +112,7 @@ function getGaugePressureAtT(n: number, V: number, o2: number, he: number, T: nu
 function getMolesAtT(pGauge: number, V: number, o2: number, he: number, T: number): number {
   const pAbs = pGauge + CONSTANTS.P_ATM;
   if (pAbs <= 0) return 0;
-  const { a, b } = getMixParams(o2, he);
+  const { a, b } = getMixParams(o2, he, T);
   const RT = CONSTANTS.R * T;
   let Vm = RT / pAbs;
   for (let i = 0; i < 20; i++) {
@@ -110,6 +123,13 @@ function getMolesAtT(pGauge: number, V: number, o2: number, he: number, T: numbe
     Vm = nextVm;
   }
   return V / Vm;
+}
+
+/** Compressibility factor Z = pV / nRT of a mix at an absolute pressure (bar) and temperature (°C). */
+export function compressibilityFactor(pAbs: number, o2: number, he: number, tempC: number): number {
+  const T = tempC + 273.15;
+  const n = getMolesAtT(pAbs - CONSTANTS.P_ATM, 1, o2, he, T);
+  return pAbs / (n * CONSTANTS.R * T);
 }
 
 /**
@@ -424,6 +444,10 @@ export interface MixMetrics {
   densityWarning: boolean;
   /** True when density exceeds the absolute limit. */
   densityCritical: boolean;
+  /** True when the mix is not breathable at the surface (ppO2 below PPO2_MIN at 1 bar). */
+  hypoxic: boolean;
+  /** Shallowest depth at which the mix reaches PPO2_MIN (metres of seawater); 0 unless hypoxic. */
+  minDepth: number;
 }
 
 /**
@@ -433,6 +457,9 @@ export interface MixMetrics {
  * absolute pressure at the MOD equals ppO2Max / FO2. Gas density at that depth
  * is derived from the ideal gas law at temperature `tempC` — the basis on which
  * the 5.2 g/L working and 6.2 g/L absolute density limits are defined.
+ *
+ * A mix whose ppO2 at the surface is below PPO2_MIN is hypoxic; `minDepth` is
+ * the depth at which it first reaches PPO2_MIN.
  */
 export function calculateMixMetrics(o2: number, he: number, ppO2Max: number, tempC: number): MixMetrics {
   const T = tempC + 273.15;
@@ -441,7 +468,11 @@ export function calculateMixMetrics(o2: number, he: number, ppO2Max: number, tem
 
   // A mix with no oxygen has no finite MOD.
   if (o2 <= 0) {
-    return { mod: Infinity, pAbsAtMod: Infinity, density: Infinity, densityWarning: true, densityCritical: true };
+    return {
+      mod: Infinity, pAbsAtMod: Infinity, density: Infinity,
+      densityWarning: true, densityCritical: true,
+      hypoxic: true, minDepth: Infinity,
+    };
   }
 
   const pAbsAtMod = ppO2Max / o2;
@@ -454,5 +485,7 @@ export function calculateMixMetrics(o2: number, he: number, ppO2Max: number, tem
     density,
     densityWarning: density > DENSITY_LIMIT.RECOMMENDED_MAX,
     densityCritical: density > DENSITY_LIMIT.ABSOLUTE_MAX,
+    hypoxic: o2 < PPO2_MIN,
+    minDepth: Math.max(0, (PPO2_MIN / o2 - 1) * 10),
   };
 }

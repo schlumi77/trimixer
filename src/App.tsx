@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { calculateBlending, calculateTopUpResult, calculateMixMetrics, LIMITS, PPO2_MAX_OPTIONS, DENSITY_LIMIT } from './logic/calculations';
+import { calculateBlending, calculateTopUpResult, calculateMixMetrics, LIMITS, PPO2_MAX_OPTIONS, PPO2_MIN, DENSITY_LIMIT } from './logic/calculations';
 import type { GasMix, SupplyConfig, BlendingSteps, Step } from './logic/calculations';
 import { APP_VERSION } from './version';
 import './App.css';
 
 const FEATURES: { icon: string; title: string; text: string }[] = [
-  { icon: '🧪', title: 'Van der Waals accuracy', text: 'Real-gas equation of state for precise partial pressures at 200–300 bar, where the ideal gas law drifts off.' },
+  { icon: '🧪', title: 'Van der Waals accuracy', text: 'Real-gas equation of state with coefficients fitted to NIST reference data, for precise partial pressures at 200–300 bar where the ideal gas law drifts off.' },
   { icon: '📋', title: 'Blending Plan', text: 'Step-by-step Helium, Oxygen and Air fills to reach a target mix from your current cylinder contents.' },
   { icon: '➕', title: 'Top-up Simulator', text: 'Predict the final mix and settled pressure when adding a given gas to an existing cylinder.' },
   { icon: '🔀', title: 'Fill order', text: 'Switch between He → O2 → Air and O2 → He → Air sequences to match your filling station.' },
@@ -381,13 +381,19 @@ function App() {
               <div className="mod-metrics">
                 <div className="metric">
                   <span className="metric-label">MOD</span>
-                  <span className="metric-value">{Number.isFinite(targetMetrics.mod) ? `${targetMetrics.mod.toFixed(0)} m` : '—'}</span>
+                  <span className="metric-value">{Number.isFinite(targetMetrics.mod) ? `${Math.floor(targetMetrics.mod)} m` : '—'}</span>
                 </div>
                 <div className={`metric${targetMetrics.densityWarning ? ' metric-warn' : ''}`}>
                   <span className="metric-label">Density @ MOD</span>
                   <span className="metric-value">{Number.isFinite(targetMetrics.density) ? `${targetMetrics.density.toFixed(1)} g/L` : '—'}</span>
                 </div>
               </div>
+              {targetMetrics.hypoxic && (
+                <div className="error-banner">
+                  ⚠️ Hypoxic mix: not breathable at the surface.
+                  {Number.isFinite(targetMetrics.minDepth) ? ` Minimum depth ${Math.ceil(targetMetrics.minDepth - 1e-9)} m (ppO2 ${PPO2_MIN} bar).` : ''}
+                </div>
+              )}
               {targetMetrics.densityWarning && Number.isFinite(targetMetrics.density) && (
                 <div className="warning-banner">
                   ⚠️ Gas density {targetMetrics.density.toFixed(1)} g/L exceeds the recommended {DENSITY_LIMIT.RECOMMENDED_MAX} g/L limit
