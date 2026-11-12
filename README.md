@@ -28,7 +28,7 @@ Trimixer is a specialized gas blending calculator for technical divers. It uses 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/trimixer.git
+   git clone https://github.com/schlumi77/trimixer.git
    cd trimixer
    ```
 
@@ -41,6 +41,7 @@ Trimixer is a specialized gas blending calculator for technical divers. It uses 
    ```bash
    npm run dev
    ```
+   Add `-- --host` (`npm run dev -- --host`) to open it from a phone on the same network.
 
 4. **Run the test suite**:
    ```bash
@@ -51,6 +52,23 @@ Trimixer is a specialized gas blending calculator for technical divers. It uses 
    ```bash
    npm run build
    ```
+
+## 📱 Mobile & Offline Use
+
+Trimixer is a Progressive Web App for use at remote dive sites and filling stations:
+
+- **Install**: open the app in Safari or Chrome, then choose **Share → Add to Home Screen** (iOS) or **Menu → Install app** (Android).
+- **Offline**: once installed, it works without an internet connection.
+
+## 🧮 How It Works
+
+- **Real gas model**: Van der Waals equation of state with coefficients fitted to NIST Chemistry WebBook data (−10 to 80 °C, 50 to 350 bar). The attraction term varies with temperature. Mixtures use quadratic mixing for the attraction term and linear mixing for the volume term; mixture results are not validated against measured mixture data.
+- **Gauge vs. absolute pressure**: you enter gauge pressures, as read on a cylinder gauge. Calculations add atmospheric pressure (1.013 bar), so the residual air in an "empty" cylinder is accounted for.
+- **MOD and gas density**: the MOD uses 10 m per bar with a 1 bar surface, so the absolute pressure at the MOD is `ppO2Max / FO2`. Gas density at that depth is computed with the ideal gas law at the configured temperature.
+
+## 🤖 AI Agents
+
+Guidance for AI coding agents (architecture, conventions, rules for changes) is in [CLAUDE.md](CLAUDE.md).
 
 ## ⚠️ Safety Warning
 
