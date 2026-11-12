@@ -112,6 +112,58 @@ function getMolesAtT(pGauge: number, V: number, o2: number, he: number, T: numbe
   return V / Vm;
 }
 
+/**
+ * Decants `nDrawn` moles of a pure gas from its supply cylinder. Returns the
+ * supply's remaining gauge pressure and, when the fill cannot be completed
+ * without a booster, a warning: either the supply does not hold enough gas, or
+ * it would drop below `pCylinder`, the pressure the cylinder has to reach.
+ */
+function drawFromSupply(
+  gas: 'He' | 'O2',
+  nDrawn: number,
+  supply: SupplyConfig,
+  T: number,
+  pCylinder: number
+): { remainingP: number; warning?: string } {
+  const isHe = gas === 'He';
+  const name = isHe ? 'Helium' : 'Oxygen';
+  const supplyP = isHe ? supply.heP : supply.o2P;
+  const supplyV = isHe ? supply.heV : supply.o2V;
+  const o2 = isHe ? 0 : 1.0;
+  const he = isHe ? 1.0 : 0;
+
+  const nLeft = getMolesAtT(supplyP, supplyV, o2, he, T) - nDrawn;
+  const pLeft = getGaugePressureAtT(nLeft, supplyV, o2, he, T);
+
+  if (pLeft < 0) {
+    return { remainingP: 0, warning: `${name} supply does not hold enough gas for this fill.` };
+  }
+  if (pLeft < pCylinder) {
+    return {
+      remainingP: pLeft,
+      warning: `${name} supply drops to ${pLeft.toFixed(0)} bar, below the ${pCylinder.toFixed(0)} bar needed in the cylinder (booster required).`,
+    };
+  }
+  return { remainingP: pLeft };
+}
+
+export interface TopUpResult {
+  pFinal: number;
+  o2Final: number;
+  heFinal: number;
+  pSettled: number;
+  safety: SafetyInfo;
+  warnings: string[];
+  validationErrors: string[];
+  /** Supply cylinder the top-up gas is drawn from; null for air or premixed gas. */
+  supplyGas: 'He' | 'O2' | null;
+  /** Remaining gauge pressure of that supply cylinder (bar); null when `supplyGas` is null. */
+  remainingSupplyP: number | null;
+}
+
+/** Fraction above which a top-up gas is treated as pure He / O2 from the supply cylinders. */
+const PURE_GAS_FRACTION = 0.995;
+
 export function calculateBlending(
   current: GasMix, 
   target: GasMix, 
@@ -225,10 +277,9 @@ export function calculateBlending(
     
     let supplyLeft = 0;
     if (gas === 'He' || gas === 'O2') {
-      const supplyV = gas === 'He' ? supply.heV : supply.o2V;
-      const nSupplyInitial = getMolesAtT(gas === 'He' ? supply.heP : supply.o2P, supplyV, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
-      const nSupplyFinal = nSupplyInitial - nToAdd;
-      supplyLeft = getGaugePressureAtT(nSupplyFinal, supplyV, gas === 'He' ? 0 : 1.0, gas === 'He' ? 1.0 : 0, T);
+      const draw = drawFromSupply(gas, nToAdd, supply, T, pHotGauge);
+      supplyLeft = draw.remainingP;
+      if (draw.warning) warnings.push(draw.warning);
     }
 
     steps.push({
@@ -237,12 +288,10 @@ export function calculateBlending(
       pAfter: pAfterGauge,
       pHot: pHotGauge,
       mixAfter: { o2: o2Fraction, he: heFraction },
-      supplyRemaining: Math.max(0, supplyLeft),
+      supplyRemaining: supplyLeft,
       gas
     });
-    
-    if (gas === 'He' && pAfterGauge > supply.heP) warnings.push(`Helium step exceeds supply pressure.`);
-    if (gas === 'O2' && pAfterGauge > supply.o2P) warnings.push(`Oxygen step exceeds supply pressure.`);
+
     currentGaugeP = pAfterGauge;
   };
 
@@ -274,27 +323,48 @@ export function calculateTopUpResult(
   supply: SupplyConfig,
   tempC: number,
   fillTempDelta: number = 0
-): { pFinal: number; o2Final: number; heFinal: number; pSettled: number; safety: SafetyInfo; remainingSupplyP: number } {
+): TopUpResult {
   const T = tempC + 273.15;
   const THot = T + fillTempDelta;
-  const nInitial = getMolesAtT(current.p, current.v, current.o2, current.he, T);
-  
+
   // targetHotP is what is seen on the gauge during the fill (hot)
   const targetHotP = topUpGas.pFinal;
-  
-  if (targetHotP <= current.p) {
-    return {
-      pFinal: targetHotP,
-      o2Final: current.o2,
-      heFinal: current.he,
-      pSettled: current.p,
-      safety: {
-        o2ServiceRequired: current.o2 > LIMITS.O2_CLEAN_FRACTION,
-        highPressureWarning: targetHotP > LIMITS.HIGH_PRESSURE
-      },
-      remainingSupplyP: topUpGas.he > 0 ? supply.heP : supply.o2P
-    };
-  }
+
+  const supplyGas: 'He' | 'O2' | null =
+    topUpGas.he >= PURE_GAS_FRACTION ? 'He' : topUpGas.o2 >= PURE_GAS_FRACTION ? 'O2' : null;
+  const supplyP = supplyGas === 'He' ? supply.heP : supplyGas === 'O2' ? supply.o2P : null;
+
+  // Result for "nothing added": invalid input, or the cylinder is already at the final pressure.
+  const unchanged = (validationErrors: string[]): TopUpResult => ({
+    pFinal: targetHotP,
+    o2Final: current.o2,
+    heFinal: current.he,
+    pSettled: current.p,
+    safety: {
+      o2ServiceRequired: current.o2 > LIMITS.O2_CLEAN_FRACTION,
+      highPressureWarning: targetHotP > LIMITS.HIGH_PRESSURE
+    },
+    warnings: [],
+    validationErrors,
+    supplyGas,
+    remainingSupplyP: supplyP
+  });
+
+  const validationErrors: string[] = [];
+  if (topUpGas.o2 + topUpGas.he > 1.0) validationErrors.push('O2 + He cannot exceed 100%');
+  if (current.o2 + current.he > 1.0) validationErrors.push('Current O2 + He cannot exceed 100%');
+  if (topUpGas.o2 < 0 || topUpGas.he < 0 || current.o2 < 0 || current.he < 0)
+    validationErrors.push('Gas fractions cannot be negative');
+  if (targetHotP > LIMITS.MAX_PRESSURE)
+    validationErrors.push(`Final pressure exceeds maximum limit (${LIMITS.MAX_PRESSURE} bar)`);
+  if (current.p < 0) validationErrors.push('Current pressure cannot be negative');
+  if (current.v <= 0) validationErrors.push('Cylinder volume must be greater than 0 L');
+  if (tempC < LIMITS.TEMP_MIN || tempC > LIMITS.TEMP_MAX)
+    validationErrors.push(`Temperature out of safe blending range (${LIMITS.TEMP_MIN} to ${LIMITS.TEMP_MAX}°C)`);
+
+  if (validationErrors.length > 0 || targetHotP <= current.p) return unchanged(validationErrors);
+
+  const nInitial = getMolesAtT(current.p, current.v, current.o2, current.he, T);
 
   // Initial guess for nAdded based on simple Ideal Gas Law delta
   const pDelta = targetHotP - current.p;
@@ -318,14 +388,14 @@ export function calculateTopUpResult(
   const finalN = nInitial + nAdded;
   const pSettled = getGaugePressureAtT(finalN, current.v, o2Final, heFinal, T);
 
-  // Remaining supply
-  const isHeSupply = topUpGas.he > 0;
-  const initialP = isHeSupply ? supply.heP : supply.o2P;
-  const supplyV = isHeSupply ? supply.heV : supply.o2V;
-  const supplyMix = isHeSupply ? { o2: 0, he: 1.0 } : { o2: topUpGas.o2, he: topUpGas.he }; // Simple assumption
-  const nSupplyInitial = getMolesAtT(initialP, supplyV, supplyMix.o2, supplyMix.he, T);
-  const nSupplyFinal = nSupplyInitial - nAdded;
-  const pRemaining = getGaugePressureAtT(nSupplyFinal, supplyV, supplyMix.o2, supplyMix.he, T);
+  // Only pure He / O2 comes from the supply cylinders; air and premixes do not.
+  const warnings: string[] = [];
+  let remainingSupplyP: number | null = null;
+  if (supplyGas) {
+    const draw = drawFromSupply(supplyGas, nAdded, supply, T, targetHotP);
+    remainingSupplyP = draw.remainingP;
+    if (draw.warning) warnings.push(draw.warning);
+  }
 
   return { 
     pFinal: targetHotP, 
@@ -336,7 +406,10 @@ export function calculateTopUpResult(
       o2ServiceRequired: o2Final > LIMITS.O2_CLEAN_FRACTION,
       highPressureWarning: targetHotP > LIMITS.HIGH_PRESSURE
     },
-    remainingSupplyP: Math.max(0, pRemaining)
+    warnings,
+    validationErrors: [],
+    supplyGas,
+    remainingSupplyP
   };
 }
 

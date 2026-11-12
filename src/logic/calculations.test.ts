@@ -100,20 +100,44 @@ describe('Gas Physics Engine (Van der Waals)', () => {
       expect(result.safety.highPressureWarning).toBe(true);
     });
 
-    it('warns when supply pressure is exceeded', () => {
+    it('warns when the He supply pressure is too low to decant', () => {
       const current = { o2: 0.21, he: 0, p: 0, v: 12 };
       const target = { o2: 0.21, he: 0.50, p: 200, v: 12 }; // Tx 21/50
       const lowSupply = { o2P: 300, heP: 50, o2V: 50, heV: 50 }; // Low He supply
       const result = calculateBlending(current, target, lowSupply, temp, 'HeFirst');
-      expect(result.warnings.some(w => w.includes('Helium step exceeds supply pressure'))).toBe(true);
+      expect(result.warnings.some(w => w.includes('Helium supply drops to'))).toBe(true);
     });
 
-    it('warns when O2 supply pressure is exceeded', () => {
+    it('warns when the O2 supply pressure is too low to decant', () => {
       const current = { o2: 0.21, he: 0, p: 0, v: 12 };
       const target = { o2: 0.40, he: 0, p: 200, v: 12 }; // 40% O2 to 200 bar
-      const lowSupply = { o2P: 10, heP: 300, o2V: 50, heV: 50 }; // O2 supply only 10 bar
+      const lowSupply = { o2P: 40, heP: 300, o2V: 50, heV: 50 }; // O2 supply only 40 bar
       const result = calculateBlending(current, target, lowSupply, temp, 'O2First');
-      expect(result.warnings.some(w => w.includes('Oxygen step exceeds supply pressure'))).toBe(true);
+      expect(result.warnings.some(w => w.includes('Oxygen supply drops to'))).toBe(true);
+    });
+
+    it('warns when the supply ends below the cylinder pressure', () => {
+      // 50 L He at 150 bar starts above the ~98 bar needed, but decanting pulls it below.
+      const current = { o2: 0.21, he: 0, p: 0, v: 24 };
+      const target = { o2: 0.18, he: 0.45, p: 230, v: 24 };
+      const result = calculateBlending(current, target, { o2P: 200, heP: 150, o2V: 50, heV: 50 }, temp, 'HeFirst');
+      const heStep = result.steps.find(s => s.gas === 'He');
+      expect(heStep!.supplyRemaining).toBeLessThan(heStep!.pAfter);
+      expect(result.warnings.some(w => w.includes('Helium supply drops to') && w.includes('booster required'))).toBe(true);
+    });
+
+    it('warns when the supply does not hold enough gas', () => {
+      const current = { o2: 0.21, he: 0, p: 0, v: 24 };
+      const target = { o2: 0.18, he: 0.45, p: 230, v: 24 };
+      const result = calculateBlending(current, target, { o2P: 200, heP: 200, o2V: 50, heV: 10 }, temp, 'HeFirst');
+      expect(result.warnings).toContain('Helium supply does not hold enough gas for this fill.');
+    });
+
+    it('raises no supply warning when the supply is sufficient', () => {
+      const current = { o2: 0.21, he: 0, p: 0, v: 12 };
+      const target = { o2: 0.18, he: 0.45, p: 200, v: 12 };
+      const result = calculateBlending(current, target, supply, temp, 'HeFirst');
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('handles O2First order correctly', () => {
@@ -136,7 +160,9 @@ describe('Gas Physics Engine (Van der Waals)', () => {
       expect(result.pFinal).toBe(200);
       expect(result.pSettled).toBeLessThan(200);
       expect(result.o2Final).toBeGreaterThan(0.26);
-      expect(result.remainingSupplyP).toBeLessThan(300);
+      // Air does not come from the O2 / He supply cylinders.
+      expect(result.supplyGas).toBeNull();
+      expect(result.remainingSupplyP).toBeNull();
     });
 
     it('handles top-up when final pressure is less than current', () => {
@@ -153,6 +179,48 @@ describe('Gas Physics Engine (Van der Waals)', () => {
       const result = calculateTopUpResult(current, topUpGas, supply, temp);
       expect(result.heFinal).toBeGreaterThan(0.3);
       expect(result.o2Final).toBeLessThan(0.21);
+      expect(result.supplyGas).toBe('He');
+      expect(result.remainingSupplyP).toBeLessThan(300);
+      expect(result.warnings).toHaveLength(0);
+    });
+
+    it('draws a pure O2 top-up from the O2 supply', () => {
+      const current = { o2: 0.21, he: 0, p: 100, v: 12 };
+      const result = calculateTopUpResult(current, { o2: 1.0, he: 0, pFinal: 130 }, supply, temp);
+      expect(result.supplyGas).toBe('O2');
+      expect(result.remainingSupplyP).toBeLessThan(300);
+    });
+
+    it('does not draw a premixed trimix top-up from the He supply', () => {
+      const current = { o2: 0.21, he: 0.35, p: 100, v: 12 };
+      const result = calculateTopUpResult(current, { o2: 0.21, he: 0.35, pFinal: 200 }, supply, temp);
+      expect(result.supplyGas).toBeNull();
+      expect(result.remainingSupplyP).toBeNull();
+    });
+
+    it('warns when the supply cannot deliver a pure-gas top-up', () => {
+      const current = { o2: 0.21, he: 0, p: 100, v: 12 };
+      const lowSupply = { o2P: 300, heP: 150, o2V: 50, heV: 50 };
+      const result = calculateTopUpResult(current, { o2: 0, he: 1.0, pFinal: 200 }, lowSupply, temp);
+      expect(result.warnings.some(w => w.includes('Helium supply drops to'))).toBe(true);
+    });
+
+    it('rejects a final pressure above the maximum', () => {
+      const current = { o2: 0.21, he: 0, p: 100, v: 12 };
+      const result = calculateTopUpResult(current, { o2: 0.21, he: 0, pFinal: 400 }, supply, temp);
+      expect(result.validationErrors).toContain('Final pressure exceeds maximum limit (300 bar)');
+      expect(result.o2Final).toBe(0.21);
+      expect(result.pSettled).toBe(100);
+    });
+
+    it('rejects invalid top-up fractions, volume and temperature', () => {
+      const current = { o2: 0.21, he: 0, p: 100, v: 12 };
+      expect(calculateTopUpResult(current, { o2: 0.6, he: 0.5, pFinal: 200 }, supply, temp).validationErrors)
+        .toContain('O2 + He cannot exceed 100%');
+      expect(calculateTopUpResult({ ...current, v: 0 }, { o2: 0.21, he: 0, pFinal: 200 }, supply, temp).validationErrors)
+        .toContain('Cylinder volume must be greater than 0 L');
+      expect(calculateTopUpResult(current, { o2: 0.21, he: 0, pFinal: 200 }, supply, 60).validationErrors)
+        .toContain('Temperature out of safe blending range (-10 to 50°C)');
     });
   });
 
