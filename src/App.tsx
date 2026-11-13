@@ -1,146 +1,36 @@
 import { useState, useMemo, useEffect } from 'react';
 import { calculateBlending, calculateTopUpResult, calculateMixMetrics, LIMITS, PPO2_MAX_OPTIONS, PPO2_MIN, DENSITY_LIMIT } from './logic/calculations';
-import type { GasMix, SupplyConfig, BlendingSteps, Step } from './logic/calculations';
+import type { GasMix, SupplyConfig, BlendingSteps } from './logic/calculations';
 import { APP_VERSION } from './version';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { PRESETS, CUSTOM_PRESET, matchPreset } from './presets';
+import InfoModal from './components/InfoModal';
+import MixingChart from './components/MixingChart';
 import './App.css';
 
-const FEATURES: { icon: string; title: string; text: string }[] = [
-  { icon: '🧪', title: 'Van der Waals accuracy', text: 'Real-gas equation of state with coefficients fitted to NIST reference data, for precise partial pressures at 200–300 bar where the ideal gas law drifts off.' },
-  { icon: '📋', title: 'Blending Plan', text: 'Step-by-step Helium, Oxygen and Air fills to reach a target mix from your current cylinder contents.' },
-  { icon: '➕', title: 'Top-up Simulator', text: 'Predict the final mix and settled pressure when adding a given gas to an existing cylinder.' },
-  { icon: '🔀', title: 'Fill order', text: 'Switch between He → O2 → Air and O2 → He → Air sequences to match your filling station.' },
-  { icon: '⬇️', title: 'Bleed detection', text: 'Detects when the current contents make the target impossible and calculates the bleed-down pressure.' },
-  { icon: '🌡️', title: 'Temperature compensation', text: 'Account for ambient storage temperature and heat of compression during the fill (hot gauge pressure).' },
-  { icon: '⚠️', title: 'Safety checks', text: `Flags O2-clean service above ${Math.round(LIMITS.O2_CLEAN_FRACTION * 100)}% O2 and high-pressure fills above ${LIMITS.HIGH_PRESSURE} bar.` },
-  { icon: '📱', title: 'Offline PWA', text: 'Install to your home screen and use it without a connection at the dive site or fill station.' },
-];
-
-const InfoModal = ({ onClose }: { onClose: () => void }) => (
-  <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="info-title" onClick={onClose}>
-    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-      <div className="modal-header">
-        <h2 id="info-title">About Trimixer</h2>
-        <button className="modal-close" onClick={onClose} aria-label="Close">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-      </div>
-
-      <p className="modal-intro">
-        A gas blending calculator for technical divers, using the Van der Waals equation of state for
-        accurate Nitrox and Trimix planning.
-      </p>
-
-      <ul className="feature-list">
-        {FEATURES.map((f) => (
-          <li key={f.title} className="feature-item">
-            <span className="feature-icon" aria-hidden="true">{f.icon}</span>
-            <div>
-              <strong>{f.title}</strong>
-              <p>{f.text}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <div className="modal-safety">
-        ⚠️ Gas blending is dangerous. Always analyze your final mix with a calibrated O2/He analyzer
-        before diving. Never rely solely on software for life-critical calculations.
-      </div>
-
-      <div className="modal-version">Version {APP_VERSION}</div>
-    </div>
-  </div>
-);
-
-const MixingChart = ({ initialMix, steps }: { initialMix: { o2: number, he: number }, steps: Step[] }) => {
-  const chartWidth = 400;
-  const chartHeight = 100;
-  const padding = 10;
-  
-  const data = [
-    initialMix,
-    ...steps.map(s => s.mixAfter)
-  ];
-
-  const pointsHe = data.map((d, i) => `${(i / (data.length - 1)) * (chartWidth - 2 * padding) + padding},${chartHeight - padding - d.he * (chartHeight - 2 * padding)}`).join(' ');
-  const pointsO2 = data.map((d, i) => `${(i / (data.length - 1)) * (chartWidth - 2 * padding) + padding},${chartHeight - padding - d.o2 * (chartHeight - 2 * padding)}`).join(' ');
-
-  return (
-    <div className="mixing-chart-container">
-      <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="mixing-chart">
-        {/* Grids */}
-        <line x1={padding} y1={chartHeight - padding} x2={chartWidth - padding} y2={chartHeight - padding} stroke="#333" />
-        <line x1={padding} y1={padding} x2={padding} y2={chartHeight - padding} stroke="#333" />
-        
-        {/* Helium Path */}
-        <polyline fill="none" stroke="#ff9800" strokeWidth="2" points={pointsHe} />
-        {/* Oxygen Path */}
-        <polyline fill="none" stroke="#00bcd4" strokeWidth="2" points={pointsO2} />
-        
-        {/* Dots */}
-        {data.map((d, i) => (
-          <g key={i}>
-            <circle cx={(i / (data.length - 1)) * (chartWidth - 2 * padding) + padding} cy={chartHeight - padding - d.he * (chartHeight - 2 * padding)} r="3" fill="#ff9800" />
-            <circle cx={(i / (data.length - 1)) * (chartWidth - 2 * padding) + padding} cy={chartHeight - padding - d.o2 * (chartHeight - 2 * padding)} r="3" fill="#00bcd4" />
-          </g>
-        ))}
-      </svg>
-      <div className="chart-legend">
-        <span style={{ color: '#00bcd4' }}>● Oxygen (%)</span>
-        <span style={{ color: '#ff9800' }}>● Helium (%)</span>
-      </div>
-    </div>
-  );
-};
-
-const useLocalStorage = <T,>(key: string, defaultValue: T) => {
-  const [value, setValue] = useState<T>(() => {
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return defaultValue;
-      }
-    }
-    return defaultValue;
-  });
-
-  useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
-
-  return [value, setValue] as const;
+/** Initial values, also restored by the reset button. */
+const DEFAULTS = {
+  current: { o2: 0.21, he: 0, p: 0, v: 12 } as GasMix,
+  target: { o2: 0.21, he: 0, p: 200, v: 12 } as GasMix,
+  supply: { o2P: 300, heP: 300, o2V: 50, heV: 50 } as SupplyConfig,
+  temp: 20,
+  fillTempDelta: 0,
+  order: 'HeFirst' as 'HeFirst' | 'O2First',
+  ppO2Max: 1.2,
+  topUpGas: { o2: 0.21, he: 0, pFinal: 200 },
 };
 
 function App() {
-  const PRESETS: Record<string, { o2: number; he: number; label: string }> = {
-    custom: { o2: 0.21, he: 0, label: 'Custom' },
-    air: { o2: 0.21, he: 0, label: 'Air' },
-    nx32: { o2: 0.32, he: 0, label: 'Nx32' },
-    nx50: { o2: 0.50, he: 0, label: 'Nx50' },
-    tx50_15: { o2: 0.50, he: 0.15, label: 'Tx50/15' },
-    tx21_35: { o2: 0.21, he: 0.35, label: 'Tx21/35' },
-    tx18_45: { o2: 0.18, he: 0.45, label: 'Tx18/45' },
-    tx15_55: { o2: 0.15, he: 0.55, label: 'Tx15/55' },
-    tx12_65: { o2: 0.12, he: 0.65, label: 'Tx12/65' },
-    tx10_80: { o2: 0.10, he: 0.80, label: 'Tx10/80' },
-    tx6_90: { o2: 0.06, he: 0.90, label: 'Tx6/90' },
-    oxygen: { o2: 1.0, he: 0, label: 'Oxygen' },
-  };
-
   const [mode, setMode] = useState<'plan' | 'topup'>('plan');
   const [showInfo, setShowInfo] = useState(false);
-  const [current, setCurrent] = useLocalStorage<GasMix>('trimixer-current', { o2: 0.21, he: 0, p: 0, v: 12 });
-  const [target, setTarget] = useLocalStorage<GasMix>('trimixer-target', { o2: 0.21, he: 0, p: 200, v: 12 });
-  const [supply, setSupply] = useLocalStorage<SupplyConfig>('trimixer-supply', { o2P: 300, heP: 300, o2V: 50, heV: 50 });
-  const [temp, setTemp] = useLocalStorage<number>('trimixer-temp', 20);
-  const [fillTempDelta, setFillTempDelta] = useLocalStorage<number>('trimixer-fill-temp-delta', 0);
-  const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', 'HeFirst');
-  const [ppO2Max, setPpO2Max] = useLocalStorage<number>('trimixer-ppo2max', 1.2);
-  const [topUpGas, setTopUpGas] = useState({ o2: 0.21, he: 0, pFinal: 200 });
+  const [current, setCurrent] = useLocalStorage<GasMix>('trimixer-current', DEFAULTS.current);
+  const [target, setTarget] = useLocalStorage<GasMix>('trimixer-target', DEFAULTS.target);
+  const [supply, setSupply] = useLocalStorage<SupplyConfig>('trimixer-supply', DEFAULTS.supply);
+  const [temp, setTemp] = useLocalStorage<number>('trimixer-temp', DEFAULTS.temp);
+  const [fillTempDelta, setFillTempDelta] = useLocalStorage<number>('trimixer-fill-temp-delta', DEFAULTS.fillTempDelta);
+  const [order, setOrder] = useLocalStorage<'HeFirst' | 'O2First'>('trimixer-order', DEFAULTS.order);
+  const [ppO2Max, setPpO2Max] = useLocalStorage<number>('trimixer-ppo2max', DEFAULTS.ppO2Max);
+  const [topUpGas, setTopUpGas] = useState(DEFAULTS.topUpGas);
 
   // Migrate legacy supply config that used a single shared bottle volume `v`.
   useEffect(() => {
@@ -246,12 +136,14 @@ function App() {
 
   const resetInputs = () => {
     if (confirm('Reset all values to default?')) {
-      setCurrent({ o2: 0.21, he: 0, p: 0, v: 12 });
-      setTarget({ o2: 0.21, he: 0, p: 200, v: 12 });
-      setSupply({ o2P: 300, heP: 300, o2V: 50, heV: 50 });
-      setTemp(20);
-      setFillTempDelta(0);
-      setOrder('HeFirst');
+      setCurrent(DEFAULTS.current);
+      setTarget(DEFAULTS.target);
+      setSupply(DEFAULTS.supply);
+      setTemp(DEFAULTS.temp);
+      setFillTempDelta(DEFAULTS.fillTempDelta);
+      setOrder(DEFAULTS.order);
+      setPpO2Max(DEFAULTS.ppO2Max);
+      setTopUpGas(DEFAULTS.topUpGas);
     }
   };
 
@@ -353,10 +245,11 @@ function App() {
               <h2>Target Mix</h2>
               <div className="input-group">
                 <label htmlFor="tgt-preset">Preset</label>
-                <select id="tgt-preset" className="select-input" onChange={(e) => {
+                <select id="tgt-preset" className="select-input" value={matchPreset(target.o2, target.he)} onChange={(e) => {
                   const p = PRESETS[e.target.value];
                   if (p) setTarget(prev => ({ ...prev, o2: p.o2, he: p.he }));
-                }} defaultValue="custom">
+                }}>
+                  <option value={CUSTOM_PRESET}>Custom</option>
                   {Object.entries(PRESETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </div>
@@ -467,10 +360,11 @@ function App() {
               <h2>Gas to Add</h2>
               <div className="input-group">
                 <label htmlFor="tu-preset">Preset</label>
-                <select id="tu-preset" className="select-input" onChange={(e) => {
+                <select id="tu-preset" className="select-input" value={matchPreset(topUpGas.o2, topUpGas.he)} onChange={(e) => {
                   const p = PRESETS[e.target.value];
                   if (p) setTopUpGas(prev => ({ ...prev, o2: p.o2, he: p.he }));
-                }} defaultValue="custom">
+                }}>
+                  <option value={CUSTOM_PRESET}>Custom</option>
                   {Object.entries(PRESETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </div>
