@@ -27,7 +27,10 @@ Before opening a PR, run lint, tests and build; CI runs the same three on every 
   - `compressibilityFactor` — exposed for tests against reference data
   - Constants: `LIMITS`, `DENSITY_LIMIT`, `PPO2_MIN`, `PPO2_MAX_OPTIONS`, and the gas-model `CONSTANTS`
 - `src/logic/calculations.test.ts` — unit tests, including checks against NIST reference densities.
-- `src/App.tsx` — the whole UI in one component: state, `localStorage` persistence, presets and rendering.
+- `src/App.tsx` — main UI component: app state, input handling and the input/result sections. Initial values and the reset button share `DEFAULTS`.
+- `src/components/` — `InfoModal` (About screen and its feature list) and `MixingChart`.
+- `src/hooks/useLocalStorage.ts` — `useState` persisted to `localStorage`.
+- `src/presets.ts` — gas presets and `matchPreset`, which selects the dropdown entry matching the current mix (tested in `src/presets.test.ts`).
 - `src/App.css`, `src/index.css` — styles; colours are CSS variables on `:root` (dark theme).
 - `src/version.ts` — `APP_VERSION`, shown in the footer and the About modal. See [Versioning](#versioning).
 - `public/` — favicon and PWA icons. `vite.config.ts` holds the PWA manifest.
@@ -55,7 +58,7 @@ Before opening a PR, run lint, tests and build; CI runs the same three on every 
 - Do not change safety thresholds (`LIMITS`, `DENSITY_LIMIT`, `PPO2_MIN`, `PPO2_MAX_OPTIONS`) or the gas-model coefficients without the maintainer asking for it. A coefficient change must come with tests against published reference data.
 - Prefer a visible warning over silently clamping or ignoring an unsafe or impossible input.
 - When a persisted state shape changes, migrate old `localStorage` values (see the legacy supply migration in `App.tsx`). Keys: `trimixer-current`, `trimixer-target`, `trimixer-supply`, `trimixer-temp`, `trimixer-fill-temp-delta`, `trimixer-order`, `trimixer-ppo2max`.
-- Keep README.md in sync with user-visible features.
+- Keep README.md and the About screen feature list (`src/components/InfoModal.tsx`) in sync with user-visible features.
 - The PNG icons in `public/` (`pwa-192.png`, `pwa-512.png`, `pwa-maskable-512.png`, `apple-touch-icon.png`) are rendered from `public/favicon.svg` by hand; there is no generation script. Regenerate them if the icon changes.
 
 ## Versioning
