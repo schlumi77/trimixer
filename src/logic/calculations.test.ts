@@ -271,13 +271,13 @@ describe('Gas Physics Engine (Van der Waals)', () => {
   describe('calculateMixMetrics', () => {
     it('calculates MOD from ppO2 and O2 fraction', () => {
       // Air (21% O2) at ppO2 1.4: MOD = 10 * (1.4/0.21 - 1)
-      const m = calculateMixMetrics(0.21, 0, 1.4, temp);
+      const m = calculateMixMetrics(0.21, 0, 1.4);
       expect(m.mod).toBeCloseTo(56.7, 1);
     });
 
     it('uses the selected ppO2 max', () => {
-      const at12 = calculateMixMetrics(0.21, 0, 1.2, temp);
-      const at16 = calculateMixMetrics(0.21, 0, 1.6, temp);
+      const at12 = calculateMixMetrics(0.21, 0, 1.2);
+      const at16 = calculateMixMetrics(0.21, 0, 1.6);
       // Higher ppO2 allowance means a deeper MOD.
       expect(at16.mod).toBeGreaterThan(at12.mod);
       expect(at12.mod).toBeCloseTo(47.1, 1);
@@ -285,33 +285,52 @@ describe('Gas Physics Engine (Van der Waals)', () => {
 
     it('flags high gas density above the recommended 5.2 g/L limit', () => {
       // Air at ppO2 1.2 -> ~47 m, dense enough to exceed 5.2 g/L.
-      const dense = calculateMixMetrics(0.21, 0, 1.2, temp);
+      const dense = calculateMixMetrics(0.21, 0, 1.2);
       expect(dense.density).toBeGreaterThan(5.2);
       expect(dense.densityWarning).toBe(true);
     });
 
     it('keeps a helium-rich mix below the density limit at its MOD', () => {
-      // Trimix 18/45 has low molar mass thanks to helium.
-      const trimix = calculateMixMetrics(0.18, 0.45, 1.2, temp);
+      // Trimix 21/35 has low molar mass thanks to helium: ~5.14 g/L at 47 m.
+      const trimix = calculateMixMetrics(0.21, 0.35, 1.2);
       expect(trimix.density).toBeLessThan(5.2);
       expect(trimix.densityWarning).toBe(false);
     });
 
+    it('evaluates density at the 0 °C reference used to define the limits', () => {
+      // Air (79% N2) at 1 bar and 0 °C is ~1.27 g/L.
+      const air = calculateMixMetrics(0.21, 0, 0.21);
+      expect(air.pAbsAtMod).toBeCloseTo(1, 10);
+      expect(air.density).toBeCloseTo(1.27, 2);
+      // Trimix 18/45 at ppO2 1.2 (56.7 m): 17.92 g/mol * 6.667 bar / (R * 273.15 K).
+      const tx = calculateMixMetrics(0.18, 0.45, 1.2);
+      expect(tx.density).toBeCloseTo(5.26, 2);
+      expect(tx.densityWarning).toBe(true);
+      expect(tx.densityCritical).toBe(false);
+    });
+
+    it('flags density above the 6.2 g/L absolute maximum', () => {
+      // Air at ppO2 1.2 (47 m) is ~7.3 g/L.
+      const air = calculateMixMetrics(0.21, 0, 1.2);
+      expect(air.density).toBeCloseTo(7.26, 1);
+      expect(air.densityCritical).toBe(true);
+    });
+
     it('does not flag a normoxic mix as hypoxic', () => {
-      const m = calculateMixMetrics(0.21, 0.35, 1.2, temp);
+      const m = calculateMixMetrics(0.21, 0.35, 1.2);
       expect(m.hypoxic).toBe(false);
       expect(m.minDepth).toBe(0);
     });
 
     it('flags a hypoxic mix and gives its minimum operating depth', () => {
       // Tx10/80 reaches ppO2 0.18 at 10 * (0.18/0.10 - 1) = 8 m.
-      const m = calculateMixMetrics(0.10, 0.80, 1.2, temp);
+      const m = calculateMixMetrics(0.10, 0.80, 1.2);
       expect(m.hypoxic).toBe(true);
       expect(m.minDepth).toBeCloseTo(8, 5);
     });
 
     it('marks a zero-oxygen mix as having no finite MOD', () => {
-      const m = calculateMixMetrics(0, 0.5, 1.2, temp);
+      const m = calculateMixMetrics(0, 0.5, 1.2);
       expect(Number.isFinite(m.mod)).toBe(false);
     });
   });

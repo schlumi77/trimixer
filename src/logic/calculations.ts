@@ -67,6 +67,15 @@ export const DENSITY_LIMIT = {
   ABSOLUTE_MAX: 6.2,
 };
 
+/**
+ * Temperature (°C) at which breathing-gas density is evaluated. The density
+ * limits are commonly quoted as air at about 30 m (5.2 g/L) and 39 m (6.2 g/L),
+ * which corresponds to a surface air density of ~1.29 g/L, i.e. 0 °C. Using a
+ * fixed, cold reference keeps the result conservative and independent of the
+ * cylinder storage temperature.
+ */
+export const DENSITY_REFERENCE_TEMP_C = 0;
+
 /** Molar masses of the component gases (g/mol). */
 const MOLAR_MASS = { o2: 31.9988, he: 4.0026, n2: 28.0134 };
 
@@ -455,14 +464,15 @@ export interface MixMetrics {
  *
  * MOD uses the diving convention of 10 m per bar with a 1 bar surface, so the
  * absolute pressure at the MOD equals ppO2Max / FO2. Gas density at that depth
- * is derived from the ideal gas law at temperature `tempC` — the basis on which
- * the 5.2 g/L working and 6.2 g/L absolute density limits are defined.
+ * is derived from the ideal gas law at DENSITY_REFERENCE_TEMP_C (0 °C), the
+ * convention behind the 5.2 g/L working and 6.2 g/L absolute density limits.
+ * It deliberately ignores the cylinder storage temperature.
  *
  * A mix whose ppO2 at the surface is below PPO2_MIN is hypoxic; `minDepth` is
  * the depth at which it first reaches PPO2_MIN.
  */
-export function calculateMixMetrics(o2: number, he: number, ppO2Max: number, tempC: number): MixMetrics {
-  const T = tempC + 273.15;
+export function calculateMixMetrics(o2: number, he: number, ppO2Max: number): MixMetrics {
+  const T = DENSITY_REFERENCE_TEMP_C + 273.15;
   const n2 = Math.max(0, 1 - o2 - he);
   const mMix = o2 * MOLAR_MASS.o2 + he * MOLAR_MASS.he + n2 * MOLAR_MASS.n2;
 
