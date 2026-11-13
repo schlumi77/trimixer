@@ -64,7 +64,7 @@ Trimixer is a Progressive Web App for use at remote dive sites and filling stati
 
 - **Real gas model**: Van der Waals equation of state with coefficients fitted to NIST Chemistry WebBook data (−10 to 80 °C, 50 to 350 bar). The attraction term varies with temperature. Mixtures use quadratic mixing for the attraction term and linear mixing for the volume term; mixture results are not validated against measured mixture data.
 - **Gauge vs. absolute pressure**: you enter gauge pressures, as read on a cylinder gauge. Calculations add atmospheric pressure (1.013 bar), so the residual air in an "empty" cylinder is accounted for.
-- **MOD and gas density**: the MOD uses 10 m per bar with a 1 bar surface, so the absolute pressure at the MOD is `ppO2Max / FO2`. Gas density at that depth is computed with the ideal gas law at the configured temperature.
+- **MOD and gas density**: the MOD uses 10 m per bar with a 1 bar surface, so the absolute pressure at the MOD is `ppO2Max / FO2`. Gas density at that depth is computed with the ideal gas law at a fixed 0 °C, the convention behind the 5.2 / 6.2 g/L limits, independent of the storage temperature.
 
 ## 🤖 AI Agents
 

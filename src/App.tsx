@@ -69,8 +69,8 @@ function App() {
   }, [current, topUpGas, supply, temp, fillTempDelta]);
 
   const targetMetrics = useMemo(() => {
-    return calculateMixMetrics(target.o2, target.he, ppO2Max, temp);
-  }, [target.o2, target.he, ppO2Max, temp]);
+    return calculateMixMetrics(target.o2, target.he, ppO2Max);
+  }, [target.o2, target.he, ppO2Max]);
 
   const handleInputChange = (
     section: 'current' | 'target' | 'supply' | 'config' | 'topup',

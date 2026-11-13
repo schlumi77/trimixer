@@ -25,7 +25,7 @@ Before opening a PR, run lint, tests and build; CI runs the same three on every 
   - `calculateTopUpResult` — top-up simulator
   - `calculateMixMetrics` — MOD, gas density at MOD, hypoxic flag and minimum depth
   - `compressibilityFactor` — exposed for tests against reference data
-  - Constants: `LIMITS`, `DENSITY_LIMIT`, `PPO2_MIN`, `PPO2_MAX_OPTIONS`, and the gas-model `CONSTANTS`
+  - Constants: `LIMITS`, `DENSITY_LIMIT`, `DENSITY_REFERENCE_TEMP_C`, `PPO2_MIN`, `PPO2_MAX_OPTIONS`, and the gas-model `CONSTANTS`
 - `src/logic/calculations.test.ts` — unit tests, including checks against NIST reference densities.
 - `src/App.tsx` — main UI component: app state, input handling and the input/result sections. Initial values and the reset button share `DEFAULTS`.
 - `src/components/` — `InfoModal` (About screen and its feature list) and `MixingChart`.
@@ -49,7 +49,7 @@ Before opening a PR, run lint, tests and build; CI runs the same three on every 
 - Real gas: Van der Waals equation with coefficients fitted to NIST Chemistry WebBook isotherms (−10 to 80 °C, 50 to 350 bar), not the textbook critical-point constants. The attraction term is linear in temperature, `a(T) = a0 + a1 (T − 293.15 K)`; helium uses `a = 0`. Pure-gas pressures match NIST within 0.7% over that range.
 - Mixtures use quadratic mixing for `a` and linear mixing for `b`. Mixtures are not validated against measured mixture data.
 - Molar volume is solved with Newton-Raphson in `getMolesAtT`; `getGaugePressureAtT` is the explicit inverse.
-- MOD: absolute pressure at the MOD is `ppO2Max / FO2`. Gas density at the MOD uses the ideal gas law at the configured temperature, which is how the 5.2 g/L (recommended) and 6.2 g/L (absolute) limits are defined.
+- MOD: absolute pressure at the MOD is `ppO2Max / FO2`. Gas density at the MOD uses the ideal gas law at a fixed 0 °C (`DENSITY_REFERENCE_TEMP_C`), the convention behind the 5.2 g/L (recommended) and 6.2 g/L (absolute) limits (air at ~30 m and ~39 m). It does not use the storage temperature, which would understate density in a warm fill room.
 - Supply cylinders are pure O2 and pure He. Only a top-up gas that is ≥ 99.5% He or O2 is drawn from them; air and premixes are not.
 
 ## Rules for changes
