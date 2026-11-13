@@ -29,7 +29,7 @@ Before opening a PR, run lint, tests and build; CI runs the same three on every 
 - `src/logic/calculations.test.ts` — unit tests, including checks against NIST reference densities.
 - `src/App.tsx` — the whole UI in one component: state, `localStorage` persistence, presets and rendering.
 - `src/App.css`, `src/index.css` — styles; colours are CSS variables on `:root` (dark theme).
-- `src/version.ts` — `APP_VERSION`, shown in the footer and the About modal.
+- `src/version.ts` — `APP_VERSION`, shown in the footer and the About modal. See [Versioning](#versioning).
 - `public/` — favicon and PWA icons. `vite.config.ts` holds the PWA manifest.
 - `.github/workflows/` — `ci.yml` (lint, test, build on PRs) and `deploy.yml` (same checks, then deploy to GitHub Pages on push to `main`).
 
@@ -54,12 +54,26 @@ Before opening a PR, run lint, tests and build; CI runs the same three on every 
 - Keep physics and validation in `calculations.ts` as pure functions, and add or update tests there for every logic change. UI-only changes do not need unit tests but should be checked in the running app.
 - Do not change safety thresholds (`LIMITS`, `DENSITY_LIMIT`, `PPO2_MIN`, `PPO2_MAX_OPTIONS`) or the gas-model coefficients without the maintainer asking for it. A coefficient change must come with tests against published reference data.
 - Prefer a visible warning over silently clamping or ignoring an unsafe or impossible input.
-- When a calculated result changes, bump the version in **both** `src/version.ts` and `package.json`.
 - When a persisted state shape changes, migrate old `localStorage` values (see the legacy supply migration in `App.tsx`). Keys: `trimixer-current`, `trimixer-target`, `trimixer-supply`, `trimixer-temp`, `trimixer-fill-temp-delta`, `trimixer-order`, `trimixer-ppo2max`.
 - Keep README.md in sync with user-visible features.
 - The PNG icons in `public/` (`pwa-192.png`, `pwa-512.png`, `pwa-maskable-512.png`, `apple-touch-icon.png`) are rendered from `public/favicon.svg` by hand; there is no generation script. Regenerate them if the icon changes.
 
+## Versioning
+
+Every pull request bumps the version, following [Semantic Versioning](https://semver.org) (`MAJOR.MINOR.PATCH`). Decide the bump from what the PR changes for someone using the app:
+
+- **MAJOR** — a breaking change: a feature is removed, or saved settings in `localStorage` are lost or reset because there is no migration.
+- **MINOR** — a new user-visible feature, input, output or warning. Reset PATCH to 0.
+- **PATCH** — anything else: bug fixes (including fixes that change calculated results), documentation, CI, dependency updates and refactors.
+
+If a PR fits more than one level, use the highest. Rules:
+
+- Set the same version in **both** `package.json` (`"version"`) and `src/version.ts` (`APP_VERSION`), and refresh `package-lock.json` with `npm install --package-lock-only`.
+- Bump on the feature branch as part of the PR, relative to the version on `main`. If `main` moves on before the PR is merged, re-check the bump after updating the branch.
+- State the new version and the reason for the level in the PR description, and say so when a PR changes calculated results.
+
 ## Workflow
 
 - Work on a feature branch and open a pull request against `main`; do not commit to `main` directly.
+- Bump the version in every pull request (see [Versioning](#versioning)).
 - Merging to `main` deploys to GitHub Pages.
